@@ -1,7 +1,7 @@
 from google import genai
 from google.genai import types
 from typing import List, Tuple, Optional
-from src.llm_core import GenericLLM, ToolRegistry
+from llm_core import GenericLLM, ToolRegistry
 
 
 class GenericGemini(GenericLLM):

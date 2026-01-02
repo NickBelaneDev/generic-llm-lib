@@ -1,5 +1,5 @@
 from google.genai import types
-from src.llm_core import ToolRegistry
+from llm_core import ToolRegistry
 from typing import Callable, Dict, Any, Union
 
 class GeminiToolRegistry(ToolRegistry):

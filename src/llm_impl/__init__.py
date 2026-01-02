@@ -1,4 +1,4 @@
-from src.llm_impl.gemini.core import GenericGemini
-from src.llm_impl.gemini.registry import GeminiToolRegistry
+from .gemini.core import GenericGemini
+from .gemini.registry import GeminiToolRegistry
 
 __all__ = ["GenericGemini", "GeminiToolRegistry"]
