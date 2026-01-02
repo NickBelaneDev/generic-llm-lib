@@ -1,13 +1,8 @@
 from abc import abstractmethod, ABC
 from typing import Callable, Dict, Any, Union
-from dataclasses import dataclass
+from .types import ToolDefinition
 
-@dataclass
-class ToolDefinition:
-    name: str
-    description: str
-    func: Callable
-    parameters: Union[Dict[str, Any], Any] # Allow Any for provider-specific types
+ # Allow Any for provider-specific types
 
 class ToolRegistry(ABC):
     """

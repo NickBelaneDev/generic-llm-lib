@@ -20,16 +20,16 @@ class GenericGemini(GenericLLM):
                  max_function_loops: int = 5
                  ):
         """
-        Initialize the Gemini wrapper.
+        Initializes the GenericGemini LLM wrapper.
 
         Args:
             client: The initialized Google GenAI client.
-            model_name: The model identifier (e.g., 'gemini-2.0-flash-exp').
-            sys_instruction: System prompt for the agent.
-            registry: Optional ToolRegistry containing available tools.
-            temp: Temperature for generation.
-            max_tokens: Max output tokens.
-            max_function_loops: Maximum number of sequential function calls allowed.
+            model_name: The identifier for the Gemini model to use (e.g., 'gemini-pro', 'gemini-flash-latest').
+            sys_instruction: A system-level instruction or persona for the LLM.
+            registry: An optional ToolRegistry instance containing tools the LLM can use.
+            temp: The temperature for text generation, controlling randomness.
+            max_tokens: The maximum number of tokens to generate in the response.
+            max_function_loops: The maximum number of consecutive function calls the LLM can make.
         """
         self.model: str = model_name
         self.registry: Optional[ToolRegistry] = registry
@@ -52,7 +52,17 @@ class GenericGemini(GenericLLM):
         self.client: genai.Client = client
 
     async def ask(self, prompt: str, model: str = None) -> str:
-        """Generates content from a given prompt. Handles function calls via a temporary chat."""
+        """
+        Generates a text response from the LLM based on a single prompt.
+        This method handles potential function calls internally by initiating a temporary chat session.
+
+        Args:
+            prompt: The user's input prompt.
+            model: Optional. Overrides the default model for this specific request.
+
+        Returns:
+            The generated text response from the LLM.
+        """
         if not model:
             model = self.model
 
@@ -65,15 +75,21 @@ class GenericGemini(GenericLLM):
                    history: List[types.Content],
                    user_prompt: str) -> Tuple[str, List[types.Content]]:
         """
-        Processes a single turn of a chat, handling user input and any subsequent
-        function calls requested by the model.
+        Processes a single turn of a chat conversation, including handling user input,
+        generating LLM responses, and executing any requested function calls.
+
+        The method supports a multi-turn interaction where the LLM can call functions
+        and receive their results within the same turn, up to `max_function_loops` times.
 
         Args:
-            history: The active chat session object (list of types.Content).
-            user_prompt: The user's message.
+            history: A list of `types.Content` objects representing the conversation history.
+            user_prompt: The current message from the user.
 
         Returns:
-            The final text response from the LLM and the updated history.
+            A tuple containing:
+            - The final text response from the LLM after all function calls (if any) are resolved.
+            - The updated conversation history, including the user's prompt, LLM's responses,
+              and any tool calls/responses.
         """
         # Create a chat session with the provided history
         chat = self.client.chats.create(
