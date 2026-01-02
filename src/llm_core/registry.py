@@ -1,8 +1,7 @@
 from abc import abstractmethod, ABC
-from typing import Callable, Dict, Any, Union
+from typing import Callable, Dict, Any, Union, Optional
 from .types import ToolDefinition
 
- # Allow Any for provider-specific types
 
 class ToolRegistry(ABC):
     """
@@ -16,11 +15,33 @@ class ToolRegistry(ABC):
         self.tools: Dict[str, ToolDefinition] = {}
 
     def register(self,
-                 tool_definition: ToolDefinition
-                 ):
-        """Register new tools for the llm"""
+                 name_or_tool: Union[str, ToolDefinition],
+                 description: Optional[str] = None,
+                 func: Optional[Callable] = None,
+                 parameters: Optional[Any] = None):
+        """
+        Register a new tool for the LLM.
 
-        self.tools[tool_definition.name] = tool_definition
+        This method allows registering a tool either by providing a `ToolDefinition` object
+        directly or by providing the individual components (name, description, function, parameters).
+
+        Args:
+            name_or_tool: Either a `ToolDefinition` object or the name of the tool (str).
+            description: A brief description of what the tool does. Required if `name_or_tool` is a string.
+            func: The callable function implementing the tool's logic. Required if `name_or_tool` is a string.
+            parameters: A schema defining the tool's input parameters. Required if `name_or_tool` is a string.
+
+        Raises:
+            ValueError: If individual arguments are provided but some are missing.
+        """
+        if isinstance(name_or_tool, ToolDefinition):
+            tool = name_or_tool
+        else:
+            if description is None or func is None or parameters is None:
+                raise ValueError("If passing name as string; description, func, and parameters are required.")
+            tool = ToolDefinition(name=name_or_tool, description=description, func=func, parameters=parameters)
+
+        self.tools[tool.name] = tool
 
     @property
     @abstractmethod

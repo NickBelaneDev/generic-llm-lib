@@ -1,6 +1,7 @@
 from google.genai import types
-from llm_core import ToolRegistry
-from typing import Callable, Dict, Any, Union
+from llm_core import ToolRegistry, ToolDefinition
+from typing import Callable, Any, Union, Optional
+
 
 class GeminiToolRegistry(ToolRegistry):
     """
@@ -10,17 +11,25 @@ class GeminiToolRegistry(ToolRegistry):
     tool object generation, which is required for integrating tools
     with the Google Generative AI client.
     """
-    def register(self, name: str, description: str, func: Callable, parameters: Union[Dict[str, Any], types.Schema, Any]):
+    def register(self,
+                 name_or_tool: Union[str, ToolDefinition],
+                 description: Optional[str] = None,
+                 func: Optional[Callable] = None,
+                 parameters: Optional[Any] = None):
         """
         Registers a tool with the GeminiToolRegistry.
 
+        This method supports two ways of registration:
+        1. Passing a `ToolDefinition` object as the first argument.
+        2. Passing individual arguments: `name`, `description`, `func`, and `parameters`.
+
         Args:
-            name: The name of the tool.
-            description: A description of what the tool does.
-            func: The callable function implementing the tool's logic.
-            parameters: A dictionary or types.Schema defining the tool's input parameters.
+            name_or_tool: Either a `ToolDefinition` object or the name of the tool (str).
+            description: A description of what the tool does. Required if `name_or_tool` is a string.
+            func: The callable function implementing the tool's logic. Required if `name_or_tool` is a string.
+            parameters: A dictionary or types.Schema defining the tool's input parameters. Required if `name_or_tool` is a string.
         """
-        super().register(name, description, func, parameters)
+        super().register(name_or_tool, description, func, parameters)
 
     @property
     def tool_object(self) -> types.Tool | None:
