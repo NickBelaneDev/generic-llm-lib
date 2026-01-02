@@ -152,3 +152,4 @@ class GenericGemini(GenericLLM):
         
         # Return text and the curated history (which includes the tool calls/responses)
         return text_response, chat.get_history(curated=True)
+

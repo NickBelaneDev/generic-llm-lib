@@ -1,4 +1,4 @@
-from typing import Optional, Union, Any, Dict, Callable
+from typing import Optional, Any, Callable
 from pydantic import BaseModel, Field
 
 # Placeholder for future generic types to decouple from provider specific types
@@ -19,7 +19,7 @@ class ToolDefinition(BaseModel):
     name: str
     description: str
     func: Callable
-    parameters: Union[Dict[str, Any], Any]
+    parameters: Any
 
 
 class LLMConfig(BaseModel):
