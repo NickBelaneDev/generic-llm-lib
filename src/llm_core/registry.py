@@ -16,19 +16,11 @@ class ToolRegistry(ABC):
         self.tools: Dict[str, ToolDefinition] = {}
 
     def register(self,
-                 name: str,
-                 description: str,
-                 func: Callable,
-                 parameters: Union[Dict[str, Any], Any]
+                 tool_definition: ToolDefinition
                  ):
         """Register new tools for the llm"""
-        tool_def = ToolDefinition(
-            name=name,
-            description=description,
-            parameters=parameters,
-            func=func
-        )
-        self.tools[name] = tool_def
+
+        self.tools[tool_definition.name] = tool_definition
 
     @property
     @abstractmethod
