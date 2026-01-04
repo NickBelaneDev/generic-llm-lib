@@ -64,7 +64,7 @@ class GenericGemini(GenericLLM):
             model: Optional. Overrides the default model for this specific request.
 
         Returns:
-            The generated text response from the LLM.
+            GeminiMessageResponse: The generated text response from the LLM.
         """
         if not model:
             model = self.model
@@ -90,7 +90,7 @@ class GenericGemini(GenericLLM):
             user_prompt: The current message from the user.
 
         Returns:
-            A tuple containing:
+            GeminiChatResponse: An object containing:
             - The final text response from the LLM after all function calls (if any) are resolved.
             - The updated conversation history, including the user's prompt, LLM's responses,
               and any tool calls/responses.
@@ -115,6 +115,13 @@ class GenericGemini(GenericLLM):
         Iterates through the response to check for function calls, executes them,
         and sends the results back to the model until no more function calls are made
         or the limit is reached.
+
+        Args:
+            response: The initial response from the model.
+            chat: The current chat session object.
+
+        Returns:
+            Tuple[GenerateContentResponse, Any]: The final response from the model and the updated chat object.
         """
         
         for _ in range(self.max_function_loops):
@@ -172,7 +179,17 @@ class GenericGemini(GenericLLM):
         return response, chat
         
     @staticmethod
-    def _build_response(response: GenerateContentResponse, chat):
+    def _build_response(response: GenerateContentResponse, chat) -> GeminiChatResponse:
+        """
+        Constructs the final GeminiChatResponse object from the raw API response and chat session.
+
+        Args:
+            response: The final GenerateContentResponse from the model.
+            chat: The chat session object containing the history.
+
+        Returns:
+            GeminiChatResponse: The structured response containing text, tokens, and history.
+        """
         text_response = "".join([p.text for p in response.parts if p.text]) if response.parts else ""
 
         # Handle cases where usage_metadata might be missing
@@ -194,7 +211,7 @@ class GenericGemini(GenericLLM):
 
         gemini_response = GeminiChatResponse(
             last_response=response_message,
-            history=chat.history
+            history=chat.get_history() # ATTENTION: DO NOT CHANGE THIS TO 'chat.history' IT DOESN'T WORK!!!
         )
     
         return gemini_response
