@@ -1,4 +1,4 @@
-from typing import List, Any, Tuple
+from typing import List, Any
 from abc import ABC, abstractmethod
 
 
@@ -8,7 +8,7 @@ class GenericLLM(ABC):
     Defines the standard interface for chatting and asking questions.
     """
     @abstractmethod
-    async def chat(self, history: List[Any], user_prompt: str) -> Tuple[str, List[Any]]:
+    async def chat(self, history: List[Any], user_prompt: str) -> Any:
         """
         Conducts a chat turn with the LLM.
 
@@ -17,14 +17,13 @@ class GenericLLM(ABC):
             user_prompt: The user's input message.
 
         Returns:
-            A tuple containing:
-            - The text response from the LLM.
-            - The updated conversation history.
+            A provider-specific response object containing the LLM's response
+            and updated conversation history.
         """
         pass
 
     @abstractmethod
-    async def ask(self, prompt: str, model: str = None) -> str:
+    async def ask(self, prompt: str, model: str = None) -> Any:
         """
         Single-turn question without maintaining history.
 
@@ -33,6 +32,6 @@ class GenericLLM(ABC):
             model: Optional model override.
 
         Returns:
-            The text response.
+            A provider-specific response object containing the LLM's response.
         """
         pass

@@ -1,7 +1,10 @@
 from google import genai
 from google.genai import types
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Any
+
+from google.genai.types import GenerateContentResponse
 from llm_core import GenericLLM, ToolRegistry
+from .models import GeminiMessageResponse, GeminiChatResponse, GeminiTokens
 
 
 class GenericGemini(GenericLLM):
@@ -51,7 +54,7 @@ class GenericGemini(GenericLLM):
 
         self.client: genai.Client = client
 
-    async def ask(self, prompt: str, model: str = None) -> str:
+    async def ask(self, prompt: str, model: str = None) -> GeminiMessageResponse:
         """
         Generates a text response from the LLM based on a single prompt.
         This method handles potential function calls internally by initiating a temporary chat session.
@@ -68,12 +71,13 @@ class GenericGemini(GenericLLM):
 
         # We use a temporary chat session to handle the tool execution loop (Model -> Tool -> Model)
         # We start with an empty history.
-        response, _ = await self.chat([], prompt)
-        return response
+        response = await self.chat([], prompt)
+
+        return response.last_response
 
     async def chat(self,
                    history: List[types.Content],
-                   user_prompt: str) -> Tuple[str, List[types.Content]]:
+                   user_prompt: str) -> GeminiChatResponse:
         """
         Processes a single turn of a chat conversation, including handling user input,
         generating LLM responses, and executing any requested function calls.
@@ -99,57 +103,98 @@ class GenericGemini(GenericLLM):
         )
         
         # Send the user message
-        response = chat.send_message(user_prompt)
-
-        # This loop continues as long as the model requests function calls.
+        _response = chat.send_message(user_prompt)
+        response, chat = self._handle_function_calls(_response, chat)
+        gemini_response = self._build_response(response, chat)
+        
+        return gemini_response
+    
+    def _handle_function_calls(self, response, chat) -> Tuple[GenerateContentResponse, Any]:
+        """
+        Handles the function calling loop.
+        Iterates through the response to check for function calls, executes them,
+        and sends the results back to the model until no more function calls are made
+        or the limit is reached.
+        """
+        
         for _ in range(self.max_function_loops):
-            # Search for a function call in any part of the response
-            target_part = next((p for p in (response.parts or []) if p.function_call), None)
-            if not target_part:
-                # If there's no function call, we have our final text response.
+            # Collect all function calls from the response parts
+            # Gemini can return multiple function calls in a single turn (parallel function calling)
+            function_calls = [p.function_call for p in (response.parts or []) if p.function_call]
+            
+            if not function_calls:
+                # If there are no function calls, we have our final text response.
                 break
 
-            # --- Execute the function call ---
-            function_call = target_part.function_call
-            function_name = function_call.name
+            parts_to_send = []
 
-            if not self.registry or function_name not in self.registry.implementations:
-                 # If tool is not found, report error to LLM
-                 response = chat.send_message(
-                    types.Part(function_response=types.FunctionResponse(
-                        name=function_name,
-                        response={"error": f"Tool '{function_name}' not found in registry."},
-                    ))
-                )
-                 continue
+            for function_call in function_calls:
+                function_name = function_call.name
 
-            try:
-                # 1. Look up the implementation and call it with the provided arguments
-                tool_function = self.registry.implementations[function_name]
-                function_result = tool_function(**dict(function_call.args))
-
-                # 2. Send the function's result back to the model.
-                response = chat.send_message(
-                    types.Part(
-                        function_response=types.FunctionResponse(
-                        name=function_name,
-                        response={"result": function_result},
+                if not self.registry or function_name not in self.registry.implementations:
+                    # If tool is not found, report error to LLM
+                    parts_to_send.append(
+                        types.Part(function_response=types.FunctionResponse(
+                            name=function_name,
+                            response={"error": f"Tool '{function_name}' not found in registry."},
+                        ))
                     )
+                    continue
+
+                try:
+                    tool_function = self.registry.implementations[function_name]
+                    # Execute the tool
+                    function_result = tool_function(**dict(function_call.args))
+
+                    # Create the response part
+                    parts_to_send.append(
+                        types.Part(
+                            function_response=types.FunctionResponse(
+                                name=function_name,
+                                response={"result": function_result},
+                            )
+                        )
                     )
-                )
 
-            except Exception as e:
-                # Send execution error back to the LLM
-                response = chat.send_message(
-                    types.Part(function_response=types.FunctionResponse(
-                        name=function_name,
-                        response={"error": str(e)},
-                    ))
-                )
-
-        # After the loop, return the final text response from the LLM.
-        text_response = "".join([p.text for p in response.parts if p.text]) if response.parts else ""
+                except Exception as e:
+                    # Send execution error back to the LLM
+                    parts_to_send.append(
+                        types.Part(function_response=types.FunctionResponse(
+                            name=function_name,
+                            response={"error": str(e)},
+                        ))
+                    )
+            
+            # Send all function results back to the model in a single message
+            if parts_to_send:
+                response = chat.send_message(parts_to_send)
+                
+        return response, chat
         
-        # Return text and the curated history (which includes the tool calls/responses)
-        return text_response, chat.get_history(curated=True)
+    @staticmethod
+    def _build_response(response: GenerateContentResponse, chat):
+        text_response = "".join([p.text for p in response.parts if p.text]) if response.parts else ""
 
+        # Handle cases where usage_metadata might be missing
+        if response.usage_metadata:
+            response_tokens = GeminiTokens(
+                candidate_token_count=response.usage_metadata.candidates_token_count,
+                prompt_token_count=response.usage_metadata.prompt_token_count,
+                total_token_count=response.usage_metadata.total_token_count,
+                thoughts_token_count=response.usage_metadata.thoughts_token_count,
+                tool_use_prompt_token_count=response.usage_metadata.tool_use_prompt_token_count
+            )
+        else:
+            response_tokens = GeminiTokens()
+
+        response_message = GeminiMessageResponse(
+            text=text_response,
+            tokens=response_tokens
+        )
+
+        gemini_response = GeminiChatResponse(
+            last_response=response_message,
+            history=chat.history
+        )
+    
+        return gemini_response
