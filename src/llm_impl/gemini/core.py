@@ -1,7 +1,7 @@
 from google import genai
 from google.genai import types
 from typing import List, Tuple, Optional, Any
-
+import inspect
 from google.genai.types import GenerateContentResponse
 from llm_core import GenericLLM, ToolRegistry
 from .models import GeminiMessageResponse, GeminiChatResponse, GeminiTokens
@@ -104,12 +104,12 @@ class GenericGemini(GenericLLM):
         
         # Send the user message
         _response = chat.send_message(user_prompt)
-        response, chat = self._handle_function_calls(_response, chat)
+        response, chat = await self._handle_function_calls(_response, chat)
         gemini_response = self._build_response(response, chat)
         
         return gemini_response
     
-    def _handle_function_calls(self, response, chat) -> Tuple[GenerateContentResponse, Any]:
+    async def _handle_function_calls(self, response, chat) -> Tuple[GenerateContentResponse, Any]:
         """
         Handles the function calling loop.
         Iterates through the response to check for function calls, executes them,
@@ -150,9 +150,11 @@ class GenericGemini(GenericLLM):
 
                 try:
                     tool_function = self.registry.implementations[function_name]
-                    # Execute the tool
-                    function_result = tool_function(**dict(function_call.args))
-
+                    # Execute the tool, either async oder sync
+                    if inspect.iscoroutinefunction(tool_function):
+                        function_result = await tool_function(**dict(function_call.args))
+                    else:
+                        function_result = tool_function(**dict(function_call.args))
                     # Create the response part
                     parts_to_send.append(
                         types.Part(
