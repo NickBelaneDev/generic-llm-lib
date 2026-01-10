@@ -39,8 +39,7 @@ llm = GenericGemini(client, "gemini-2.0-flash-exp", "You are helpful.", registry
 async def main():
     gemini_chat = await llm.chat([], "Weather in Berlin?")
     print(gemini_chat.last_response.text)
-    print(gemini_chat.last_response.tokens)
-    print(gemini_chat.total_tokens)
+    print(gemini_chat.last_response.tokens.total_token_count)
     print(gemini_chat.history)
     
 
