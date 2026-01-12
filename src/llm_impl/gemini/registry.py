@@ -49,11 +49,18 @@ class GeminiToolRegistry(ToolRegistry):
             # Ensure parameters are compatible with types.FunctionDeclaration
             # If it's a dict, the library usually handles it, but type checkers might complain.
             # If it's already a types.Schema (or similar), it's passed through.
-            declarations.append(types.FunctionDeclaration(
-                name=tool.name,
-                description=tool.description,
-                parameters=tool.parameters
-            ))
+
+            if tool.parameters:
+                declarations.append(types.FunctionDeclaration(
+                    name=tool.name,
+                    description=tool.description,
+                    parameters=tool.parameters
+                ))
+            else:
+                declarations.append(types.FunctionDeclaration(
+                    name=tool.name,
+                    description=tool.description
+                ))
 
         return types.Tool(function_declarations=declarations)
 

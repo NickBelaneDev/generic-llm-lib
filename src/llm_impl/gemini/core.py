@@ -49,6 +49,7 @@ class GenericGemini(GenericLLM):
             system_instruction=sys_instruction,
             temperature=temp,
             max_output_tokens=max_tokens,
+
             tools=tools_config
         )
 
@@ -71,7 +72,7 @@ class GenericGemini(GenericLLM):
 
         # We use a temporary chat session to handle the tool execution loop (Model -> Tool -> Model)
         # We start with an empty history.
-        response = await self.chat([], prompt)
+        response: GeminiChatResponse = await self.chat([], prompt)
 
         return response.last_response
 

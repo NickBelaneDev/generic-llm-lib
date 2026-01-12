@@ -19,7 +19,7 @@ class ToolDefinition(BaseModel):
     name: str
     description: str
     func: Callable
-    parameters: Any
+    parameters: Optional[Any] = None
 
 
 class LLMConfig(BaseModel):
