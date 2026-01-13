@@ -1,7 +1,16 @@
 from abc import abstractmethod, ABC
 from typing import Callable, Dict, Any, Union, Optional
 from .types import ToolDefinition
+import inspect
 
+TYPE_MAPPING = {
+    str: "STRING",
+    int: "INTEGER",
+    float: "NUMBER",
+    bool: "BOOLEAN",
+    list: "ARRAY",
+    dict: "OBJECT"
+}
 
 class ToolRegistry(ABC):
     """
@@ -42,6 +51,47 @@ class ToolRegistry(ABC):
             tool = ToolDefinition(name=name_or_tool, description=description, func=func, parameters=parameters)
 
         self.tools[tool.name] = tool
+
+    def tool(self, func: Callable) -> Callable:
+        """A decorator to turn a function into a Gemini tool"""
+        name = func.__name__
+        description = inspect.getdoc(func) or "No description provided"
+        signature = inspect.signature(func)
+
+        properties = {}
+        required = []
+
+        for param_name, param in signature.parameters.items():
+            if param_name == "self":
+                continue
+
+            python_type = param.annotation
+
+            if python_type == inspect.Parameter.empty:
+                schema_type = "STRING"
+            else:
+                schema_type = TYPE_MAPPING.get(python_type, "STRING")
+
+            properties[param_name] = {"type": schema_type}
+
+            if param.default == inspect.Parameter.empty:
+                required.append(param_name)
+
+        parameters = {
+            "type": "OBJECT",
+            "properties": properties,
+        }
+        if required:
+            parameters["required"] = required
+
+        self.register(
+            name_or_tool=name,
+            description=description,
+            func=func,
+            parameters=parameters
+        )
+
+        return func
 
     @property
     @abstractmethod

@@ -104,7 +104,7 @@ class GenericGemini(GenericLLM):
         )
         
         # Send the user message
-        _response = chat.send_message(user_prompt)
+        _response = await chat.send_message(user_prompt)
         response, chat = await self._handle_function_calls(_response, chat)
         gemini_response = self._build_response(response, chat)
         
@@ -177,7 +177,7 @@ class GenericGemini(GenericLLM):
             
             # Send all function results back to the model in a single message
             if parts_to_send:
-                response = chat.send_message(parts_to_send)
+                response = await chat.send_message(parts_to_send)
                 
         return response, chat
         

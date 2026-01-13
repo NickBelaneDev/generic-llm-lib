@@ -4,7 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## [0.2.2] - 2026-01-13
+
+### Added
+- **@tool decorator**: Now supports a simple decorator `@registry.tool` to declare a function as a tool and add it to the llm's `registry`.
+
 ## [0.2.1] - 2026-01-10
+
 ### Added
 - **async Function calls**: The GenericGemini can now handle async functions as well.
 

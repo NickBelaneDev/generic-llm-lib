@@ -1,7 +1,17 @@
+import inspect
+
 from google.genai import types
 from llm_core import ToolRegistry, ToolDefinition
-from typing import Callable, Any, Union, Optional
+from typing import Callable, Dict, Any, Union, Optional
 
+TYPE_MAPPING = {
+    str: "STRING",
+    int: "INTEGER",
+    float: "NUMBER",
+    bool: "BOOLEAN",
+    list: "ARRAY",
+    dict: "OBJECT"
+}
 
 class GeminiToolRegistry(ToolRegistry):
     """
@@ -11,6 +21,9 @@ class GeminiToolRegistry(ToolRegistry):
     tool object generation, which is required for integrating tools
     with the Google Generative AI client.
     """
+    def __init__(self):
+        self.tools: Dict[str, ToolDefinition] = {}
+
     def register(self,
                  name_or_tool: Union[str, ToolDefinition],
                  description: Optional[str] = None,
@@ -30,6 +43,7 @@ class GeminiToolRegistry(ToolRegistry):
             parameters: A dictionary or types.Schema defining the tool's input parameters. Required if `name_or_tool` is a string.
         """
         super().register(name_or_tool, description, func, parameters)
+
 
     @property
     def tool_object(self) -> types.Tool | None:
