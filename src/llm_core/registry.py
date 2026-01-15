@@ -1,5 +1,11 @@
+import copy
 from abc import abstractmethod, ABC
-from typing import Callable, Dict, Any, Union, Optional
+from typing import Callable, Dict, Any, Union, Optional, get_origin, Annotated, get_args
+
+from pydantic import BaseModel
+from pydantic.fields import FieldInfo
+from pydantic.v1 import create_model
+
 from .types import ToolDefinition
 import inspect
 
@@ -55,40 +61,51 @@ class ToolRegistry(ABC):
     def tool(self, func: Callable) -> Callable:
         """A decorator to turn a function into a Gemini tool"""
         name = func.__name__
-        description = inspect.getdoc(func) or "No description provided"
+        doc = inspect.getdoc(func)
+        if not doc:
+            raise ValueError(f"Tool '{name}' missing docstring. LLMs need a description of what the tool does.")
+        description = doc
         signature = inspect.signature(func)
 
-        properties = {}
-        required = []
+        fields = {}
 
         for param_name, param in signature.parameters.items():
             if param_name == "self":
                 continue
 
-            python_type = param.annotation
+            annotation = param.annotation
+            default = param.default
 
-            if python_type == inspect.Parameter.empty:
-                schema_type = "STRING"
-            else:
-                schema_type = TYPE_MAPPING.get(python_type, "STRING")
+            has_description = False
 
-            properties[param_name] = {"type": schema_type}
+            # Every Tools parameter needs 'Annotated[<class>, Field(description='...')] = ...' as its annotation
+            if get_origin(annotation) is Annotated:
+                for metadata in get_args(annotation):
+                    if isinstance(metadata, FieldInfo) and metadata.description:
+                        has_description = True
+                        break
 
-            if param.default == inspect.Parameter.empty:
-                required.append(param_name)
+            if not has_description:
+                raise ValueError(
+                    f"Parameter '{param_name}' in tool '{name}' is missing a description.\n"
+                    f"Usage: {param_name}: Annotated[Type, Field(description='...')] = ..."
+                )
 
-        parameters = {
-            "type": "OBJECT",
-            "properties": properties,
-        }
-        if required:
-            parameters["required"] = required
+            pydantic_default = default if default != inspect.Parameter.empty else ...
+            fields[param_name] = (annotation, pydantic_default)
+
+        DynamicParamsModel: BaseModel = create_model(f"{name}Params", **fields)
+
+        raw_schema = DynamicParamsModel.model_json_schema()
+        parameters_schema = self._resolve_schema_refs(raw_schema)
+
+        parameters_schema.pop("title", None)
 
         self.register(
             name_or_tool=name,
             description=description,
             func=func,
-            parameters=parameters
+            parameters=parameters_schema
         )
 
         return func
@@ -103,3 +120,36 @@ class ToolRegistry(ABC):
     def implementations(self) -> Dict[str, Callable]:
         """Returns a dictionary mapping function names to their callables."""
         return {name: tool.func for name, tool in self.tools.items()}
+
+    def _resolve_schema_refs(self, schema: dict, defs: dict = None) -> dict:
+        schema = copy.deepcopy(schema)
+
+        if defs is None:
+            defs = schema.pop("$defs", {})
+
+        if "$ref" in schema:
+            ref_key = schema["$ref"].split("/")[-1]
+            if ref_key in defs:
+                ref_content = defs[ref_key]
+                resolved_content = self._resolve_schema_refs(ref_content, defs)
+
+                for k, v in resolved_content.items():
+                    if k not in schema or k == "$ref":
+                        schema[k] = v
+
+                del schema["$ref"]
+                return schema
+
+        if "properties" in schema:
+            for prop_name, prop_schema in schema["properties"].items():
+                schema["properties"][prop_name] = self._resolve_schema_refs(prop_schema, defs)
+
+        if "items" in schema:
+            schema["items"] = self._resolve_schema_refs(schema["items"], defs)
+
+        for key in ["anyOf", "allOf", "oneOf"]:
+            if key in schema:
+                schema[key] = [self._resolve_schema_refs(item, defs) for item in schema[key]]
+
+        return schema
+

@@ -14,7 +14,7 @@ A flexible, async-first library designed for building scalable agents and chatbo
 ## Usage
 
 ```python
-from src.llm_impl import GenericGemini, GeminiToolRegistry
+from llm_impl import GenericGemini, GeminiToolRegistry
 from google import genai
 import asyncio
 
