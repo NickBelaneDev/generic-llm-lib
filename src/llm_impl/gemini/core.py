@@ -110,7 +110,7 @@ class GenericGemini(GenericLLM):
         
         return gemini_response
     
-    async def _handle_function_calls(self, response, chat) -> Tuple[GenerateContentResponse, Any]:
+    async def _handle_function_calls(self, response: GenerateContentResponse, chat) -> Tuple[GenerateContentResponse, Any]:
         """
         Handles the function calling loop.
         Iterates through the response to check for function calls, executes them,
