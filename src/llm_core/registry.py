@@ -4,7 +4,7 @@ from typing import Callable, Dict, Any, Union, Optional, get_origin, Annotated, 
 
 from pydantic import BaseModel
 from pydantic.fields import FieldInfo
-from pydantic import create_model # NOTE: It was pydantic.v1 before
+from pydantic import create_model # NOTE: For context: it was pydantic.v1 before.
 
 from .types import ToolDefinition
 import inspect

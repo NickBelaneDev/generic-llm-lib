@@ -103,3 +103,25 @@ def test_nested_pydantic_models_schema_resolution():
     import json
     schema_str = json.dumps(schema)
     assert "$ref" not in schema_str
+
+def test_tool_without_parameters():
+    """
+    Tests registering a tool that takes no parameters.
+    """
+    registry = ConcreteTestRegistry()
+
+    @registry.tool
+    def get_current_time() -> str:
+        """Returns the current server time."""
+        return "12:00 PM"
+
+    assert "get_current_time" in registry.tools
+    tool_def = registry.tools["get_current_time"]
+    
+    assert tool_def.description == "Returns the current server time."
+    assert tool_def.func() == "12:00 PM"
+    
+    # Verify schema is empty object or None-like structure for no params
+    schema = tool_def.parameters
+    assert schema["type"] == "object"
+    assert schema["properties"] == {}
