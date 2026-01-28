@@ -49,6 +49,9 @@ class ToolRegistry(ABC):
         Raises:
             ValueError: If individual arguments are provided but some are missing.
         """
+
+        #TODO: Check if the tool already exists before registering
+
         if isinstance(name_or_tool, ToolDefinition):
             tool = name_or_tool
         else:
