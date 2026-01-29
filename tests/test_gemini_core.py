@@ -132,3 +132,48 @@ async def test_function_calling(mock_genai_client, mock_chat_session):
     mock_tool.assert_called_once_with(arg="val")
     # Verify chat sent function result back
     assert mock_chat_session.send_message.call_count == 2
+
+@pytest.mark.asyncio
+async def test_function_calling_with_empty_args(mock_genai_client, mock_chat_session):
+    registry = GeminiToolRegistry()
+    mock_tool = AsyncMock(return_value="Tool Result")
+    mock_tool.__name__ = "empty_args_tool"
+
+    mock_tool_def = MagicMock()
+    mock_tool_def.name = "empty_args_tool"
+    mock_tool_def.func = mock_tool
+    mock_tool_def.parameters = {}
+    mock_tool_def.description = "Tool with empty args"
+
+    registry.tools["empty_args_tool"] = mock_tool_def
+
+    mock_genai_client.chats.create.return_value = mock_chat_session
+
+    response1 = MagicMock()
+    func_call = MagicMock()
+    func_call.name = "empty_args_tool"
+    func_call.args = None
+    response1.parts = [MagicMock(function_call=func_call, text=None)]
+
+    response2 = MagicMock()
+    response2.parts = [MagicMock(text="Final answer", function_call=None)]
+    response2.usage_metadata = None
+
+    mock_chat_session.send_message.side_effect = [response1, response2]
+
+    mock_content = MagicMock()
+    mock_content.role = "model"
+    mock_content.parts = []
+    mock_chat_session.get_history.return_value = [mock_content]
+
+    gemini = GenericGemini(
+        client=mock_genai_client,
+        model_name="gemini-pro",
+        sys_instruction="System",
+        registry=registry
+    )
+
+    await gemini.chat([], "Call tool without args")
+
+    mock_tool.assert_called_once_with()
+    assert mock_chat_session.send_message.call_count == 2
