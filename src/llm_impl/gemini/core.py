@@ -159,13 +159,14 @@ class GenericGemini(GenericLLM):
                     continue
 
                 try:
+                    function_args = self._normalize_function_args(function_call)
                     tool_function = self.registry.implementations[function_name]
                     # Execute the tool, either async oder sync
                     if inspect.iscoroutinefunction(tool_function):
-                        function_result = await tool_function(**dict(function_call.args))
+                        function_result = await tool_function(**function_args)
                     else:
                         # Run synchronous tools in a thread to avoid blocking the event loop
-                        function_result = await asyncio.to_thread(tool_function, **dict(function_call.args))
+                        function_result = await asyncio.to_thread(tool_function, **function_args)
                     
                     # Create the response part
                     parts_to_send.append(
@@ -191,6 +192,20 @@ class GenericGemini(GenericLLM):
                 response = chat.send_message(parts_to_send)
                 
         return response, chat
+
+    @staticmethod
+    def _normalize_function_args(function_call: Any) -> dict:
+        raw_args = getattr(function_call, "args", None)
+        if raw_args is None:
+            return {}
+        if isinstance(raw_args, dict):
+            return raw_args
+        try:
+            return dict(raw_args)
+        except (TypeError, ValueError) as exc:
+            raise ToolExecutionError(
+                f"Failed to parse arguments for tool '{function_call.name}': {exc}"
+            ) from exc
 
     def _clean_history(self, history: List[types.Content]) -> List[types.Content]:
         """

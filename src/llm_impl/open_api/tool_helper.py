@@ -48,8 +48,8 @@ class ToolHelper:
                 tool_call_id = tool_call.id
                 
                 try:
-                    function_args = json.loads(tool_call.function.arguments)
-                except json.JSONDecodeError as e:
+                    function_args = self._parse_tool_arguments(tool_call.function.arguments)
+                except ValueError as e:
                     messages.append({
                         "role": "tool",
                         "tool_call_id": tool_call_id,
@@ -91,6 +91,20 @@ class ToolHelper:
         messages.append(current_message.model_dump())
         
         return messages, current_response
+
+    @staticmethod
+    def _parse_tool_arguments(arguments: Optional[str]) -> Dict[str, Any]:
+        if not arguments:
+            return {}
+        try:
+            parsed = json.loads(arguments)
+        except json.JSONDecodeError as exc:
+            raise ValueError(str(exc)) from exc
+        if parsed is None:
+            return {}
+        if not isinstance(parsed, dict):
+            raise ValueError("Function arguments must decode to a JSON object.")
+        return parsed
 
     async def _execute_tool(self,
                             function_name: str,

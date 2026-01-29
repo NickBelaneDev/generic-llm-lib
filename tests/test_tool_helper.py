@@ -198,3 +198,108 @@ async def test_handle_function_calls_error(mock_openai_client, mock_registry):
     content = json.loads(updated_messages[1]["content"])
     assert "error" in content
     assert content["error"] == "Tool failed"
+
+@pytest.mark.asyncio
+async def test_handle_function_calls_empty_arguments(mock_openai_client, mock_registry):
+    mock_tool_func = AsyncMock(return_value="Success")
+    mock_registry.implementations = {"test_tool": mock_tool_func}
+
+    helper = ToolHelper(
+        client=mock_openai_client,
+        model="gpt-4",
+        registry=mock_registry,
+        temperature=0.7,
+        max_tokens=100,
+        max_function_loops=5
+    )
+
+    tool_call = MagicMock()
+    tool_call.id = "call_empty"
+    tool_call.function.name = "test_tool"
+    tool_call.function.arguments = ""
+
+    msg1 = MagicMock(spec=ChatCompletionMessage)
+    msg1.tool_calls = [tool_call]
+    msg1.model_dump.return_value = {
+        "role": "assistant",
+        "tool_calls": [{"id": "call_empty", "function": {"name": "test_tool", "arguments": ""}}]
+    }
+
+    choice1 = MagicMock(spec=Choice)
+    choice1.message = msg1
+
+    response1 = MagicMock(spec=ChatCompletion)
+    response1.choices = [choice1]
+
+    msg2 = MagicMock(spec=ChatCompletionMessage)
+    msg2.content = "Done"
+    msg2.tool_calls = None
+    msg2.model_dump.return_value = {"role": "assistant", "content": "Done"}
+
+    choice2 = MagicMock(spec=Choice)
+    choice2.message = msg2
+
+    response2 = MagicMock(spec=ChatCompletion)
+    response2.choices = [choice2]
+
+    mock_openai_client.chat.completions.create.return_value = response2
+
+    messages = [{"role": "user", "content": "Run tool"}]
+    updated_messages, _ = await helper.handle_function_calls(messages, response1)
+
+    mock_tool_func.assert_called_once_with()
+    assert updated_messages[2]["role"] == "tool"
+    assert json.loads(updated_messages[2]["content"]) == {"result": "Success"}
+
+@pytest.mark.asyncio
+async def test_handle_function_calls_invalid_arguments(mock_openai_client, mock_registry):
+    mock_tool_func = AsyncMock(return_value="Success")
+    mock_registry.implementations = {"test_tool": mock_tool_func}
+
+    helper = ToolHelper(
+        client=mock_openai_client,
+        model="gpt-4",
+        registry=mock_registry,
+        temperature=0.7,
+        max_tokens=100,
+        max_function_loops=5
+    )
+
+    tool_call = MagicMock()
+    tool_call.id = "call_invalid"
+    tool_call.function.name = "test_tool"
+    tool_call.function.arguments = '["not", "object"]'
+
+    msg1 = MagicMock(spec=ChatCompletionMessage)
+    msg1.tool_calls = [tool_call]
+    msg1.model_dump.return_value = {
+        "role": "assistant",
+        "tool_calls": [{"id": "call_invalid", "function": {"name": "test_tool", "arguments": '["not", "object"]'}}]
+    }
+
+    choice1 = MagicMock(spec=Choice)
+    choice1.message = msg1
+
+    response1 = MagicMock(spec=ChatCompletion)
+    response1.choices = [choice1]
+
+    msg2 = MagicMock(spec=ChatCompletionMessage)
+    msg2.content = "Done"
+    msg2.tool_calls = None
+    msg2.model_dump.return_value = {"role": "assistant", "content": "Done"}
+
+    choice2 = MagicMock(spec=Choice)
+    choice2.message = msg2
+
+    response2 = MagicMock(spec=ChatCompletion)
+    response2.choices = [choice2]
+
+    mock_openai_client.chat.completions.create.return_value = response2
+
+    messages = [{"role": "user", "content": "Run tool"}]
+    updated_messages, _ = await helper.handle_function_calls(messages, response1)
+
+    mock_tool_func.assert_not_called()
+    assert updated_messages[2]["role"] == "tool"
+    content = json.loads(updated_messages[2]["content"])
+    assert "error" in content
