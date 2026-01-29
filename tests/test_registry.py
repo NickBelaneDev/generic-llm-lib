@@ -3,6 +3,7 @@ from typing import Annotated, List, Dict
 from pydantic import Field, BaseModel
 from llm_core.registry import ToolRegistry
 from llm_impl.gemini.registry import GeminiToolRegistry
+from llm_impl.open_api.registry import OpenAIToolRegistry
 from google.genai import types
 
 # Create a concrete implementation for testing base class functionality
@@ -39,6 +40,25 @@ def test_gemini_registry_tool_object():
     decl = tool_obj.function_declarations[0]
     assert decl.name == "my_tool"
     assert decl.description == "My tool description."
+
+def test_openai_registry_tool_object():
+    registry = OpenAIToolRegistry()
+    
+    @registry.tool
+    def my_tool(x: Annotated[int, Field(description="An integer")]) -> int:
+        """My tool description."""
+        return x * 2
+        
+    tool_obj = registry.tool_object
+    assert isinstance(tool_obj, list)
+    assert len(tool_obj) == 1
+    
+    tool_def = tool_obj[0]
+    assert tool_def["type"] == "function"
+    assert tool_def["function"]["name"] == "my_tool"
+    assert tool_def["function"]["description"] == "My tool description."
+    assert "parameters" in tool_def["function"]
+    assert tool_def["function"]["parameters"]["type"] == "object"
 
 def test_registry_missing_docstring():
     registry = ConcreteTestRegistry()

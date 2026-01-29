@@ -14,8 +14,15 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "google-genai"
+    "google-genai",
+    "openai"
 ]
 
 [project.urls]
 "Homepage" = "https://github.com/NickBelaneDev/generic-llm-lib"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.2",
+    "pytest-asyncio>=1.2.0",
+]

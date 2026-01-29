@@ -106,7 +106,14 @@ class GenericGemini(GenericLLM):
         # Send the user message
         _response = chat.send_message(user_prompt)
         response, chat = await self._handle_function_calls(_response, chat)
-        gemini_response = self._build_response(response, chat)
+        
+        # Get full history
+        full_history = chat.get_history()
+        
+        # Clean history to remove intermediate tool calls and outputs to save tokens
+        cleaned_history = self._clean_history(full_history)
+        
+        gemini_response = self._build_response(response, cleaned_history)
         
         return gemini_response
     
@@ -180,15 +187,49 @@ class GenericGemini(GenericLLM):
                 response = chat.send_message(parts_to_send)
                 
         return response, chat
+
+    def _clean_history(self, history: List[types.Content]) -> List[types.Content]:
+        """
+        Removes intermediate tool calls and outputs from the history to save tokens.
+        Keeps user messages, system instructions, and assistant messages that have content.
+        """
+        cleaned_history = []
+        for content in history:
+            # Skip if no parts
+            if not content.parts:
+                cleaned_history.append(content)
+                continue
+            
+            # Check if it is a function response
+            has_function_response = any(part.function_response for part in content.parts)
+            if has_function_response:
+                continue
+
+            # Check for function calls
+            has_function_call = any(part.function_call for part in content.parts)
+            
+            if has_function_call:
+                # Filter out function_call parts, keep text parts
+                new_parts = [part for part in content.parts if not part.function_call]
+                
+                if new_parts:
+                    # Create new Content with remaining parts (e.g. text)
+                    cleaned_history.append(types.Content(role=content.role, parts=new_parts))
+                # If no parts left (only function calls), we skip this message
+            else:
+                # No function calls or responses, keep as is
+                cleaned_history.append(content)
+                
+        return cleaned_history
         
     @staticmethod
-    def _build_response(response: GenerateContentResponse, chat) -> GeminiChatResponse:
+    def _build_response(response: GenerateContentResponse, history: List[types.Content]) -> GeminiChatResponse:
         """
-        Constructs the final GeminiChatResponse object from the raw API response and chat session.
+        Constructs the final GeminiChatResponse object from the raw API response and chat history.
 
         Args:
             response: The final GenerateContentResponse from the model.
-            chat: The chat session object containing the history.
+            history: The chat history list.
 
         Returns:
             GeminiChatResponse: The structured response containing text, tokens, and history.
@@ -214,7 +255,7 @@ class GenericGemini(GenericLLM):
 
         gemini_response = GeminiChatResponse(
             last_response=response_message,
-            history=chat.get_history() # ATTENTION: DO NOT CHANGE THIS TO 'chat.history' IT DOESN'T WORK!!!
+            history=history
         )
     
         return gemini_response
