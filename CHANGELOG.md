@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.2.3] - 2026-02-26
+
+### Added
+- **OpenAI Support**: Added `GenericOpenAI` implementation to support OpenAI's chat models with tool calling capabilities.
+
+### Fixed
+- **Blocking Event Loop**: Fixed a critical issue where synchronous tools were executed directly in the main thread, blocking the asyncio event loop. Synchronous tools are now executed in a separate thread using `asyncio.to_thread`.
+- **JSON Parsing**: Added robust error handling for JSON parsing of function arguments in `GenericOpenAI`. Invalid JSON from the LLM now returns an error message to the model instead of crashing the application.
+- **Test Suite**: Fixed various test failures in `test_openai_core.py` related to missing mock attributes and incorrect assertions.
+
 ## [0.2.2] - 2026-01-13
 
 ### Added

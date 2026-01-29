@@ -2,8 +2,10 @@ from google import genai
 from google.genai import types
 from typing import List, Tuple, Optional, Any
 import inspect
+import asyncio
 from google.genai.types import GenerateContentResponse
 from llm_core import GenericLLM, ToolRegistry
+from llm_core.exceptions import ToolExecutionError, ToolNotFoundError
 from .models import GeminiMessageResponse, GeminiChatResponse, GeminiTokens
 
 
@@ -162,7 +164,9 @@ class GenericGemini(GenericLLM):
                     if inspect.iscoroutinefunction(tool_function):
                         function_result = await tool_function(**dict(function_call.args))
                     else:
-                        function_result = tool_function(**dict(function_call.args))
+                        # Run synchronous tools in a thread to avoid blocking the event loop
+                        function_result = await asyncio.to_thread(tool_function, **dict(function_call.args))
+                    
                     # Create the response part
                     parts_to_send.append(
                         types.Part(

@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, AsyncMock
 from typing import Annotated, List, Optional
 from pydantic import BaseModel, Field
 from llm_core.registry import ToolRegistry
+from llm_core.exceptions import ToolRegistrationError
 from llm_impl.gemini.core import GenericGemini
 from llm_impl.gemini.registry import GeminiToolRegistry
 
@@ -23,15 +24,11 @@ def test_duplicate_tool_registration_overwrite():
         """First implementation."""
         return "first"
 
-    @registry.tool
-    def my_tool() -> str: # Same name
-        """Second implementation."""
-        return "second"
-
-    # Check which one is active
-    assert registry.tools["my_tool"].description == "Second implementation."
-    assert registry.tools["my_tool"].func() == "second"
-    # No warning or error was raised.
+    with pytest.raises(ToolRegistrationError, match="already registered"):
+        @registry.tool
+        def my_tool() -> str: # Same name
+            """Second implementation."""
+            return "second"
 
 # --- Weakness 2: Circular Pydantic Models ---
 def test_circular_pydantic_models_recursion_error():

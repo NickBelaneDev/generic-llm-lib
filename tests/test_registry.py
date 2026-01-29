@@ -2,6 +2,7 @@ import pytest
 from typing import Annotated, List, Dict
 from pydantic import Field, BaseModel
 from llm_core.registry import ToolRegistry
+from llm_core.exceptions import ToolValidationError
 from llm_impl.gemini.registry import GeminiToolRegistry
 from llm_impl.open_api.registry import OpenAIToolRegistry
 from google.genai import types
@@ -62,14 +63,14 @@ def test_openai_registry_tool_object():
 
 def test_registry_missing_docstring():
     registry = ConcreteTestRegistry()
-    with pytest.raises(ValueError, match="missing docstring"):
+    with pytest.raises(ToolValidationError, match="missing docstring"):
         @registry.tool
         def no_doc_tool(x: Annotated[int, Field(description="desc")]):
             pass
 
 def test_registry_missing_param_description():
     registry = ConcreteTestRegistry()
-    with pytest.raises(ValueError, match="missing a description"):
+    with pytest.raises(ToolValidationError, match="missing a description"):
         @registry.tool
         def bad_param_tool(x: int):
             """Docstring."""

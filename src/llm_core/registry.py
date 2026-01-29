@@ -7,6 +7,7 @@ from pydantic.fields import FieldInfo
 from pydantic import create_model # NOTE: For context: it was pydantic.v1 before.
 
 from .types import ToolDefinition
+from .exceptions import ToolRegistrationError, ToolValidationError
 import inspect
 
 TYPE_MAPPING = {
@@ -47,17 +48,18 @@ class ToolRegistry(ABC):
             parameters: A schema defining the tool's input parameters. Required if `name_or_tool` is a string.
 
         Raises:
-            ValueError: If individual arguments are provided but some are missing.
+            ToolRegistrationError: If individual arguments are provided but some are missing or if the tool already exists.
         """
-
-        #TODO: Check if the tool already exists before registering
 
         if isinstance(name_or_tool, ToolDefinition):
             tool = name_or_tool
         else:
             if description is None or func is None or parameters is None:
-                raise ValueError("If passing name as string; description, func, and parameters are required.")
+                raise ToolRegistrationError("If passing name as string; description, func, and parameters are required.")
             tool = ToolDefinition(name=name_or_tool, description=description, func=func, parameters=parameters)
+
+        if tool.name in self.tools:
+             raise ToolRegistrationError(f"Tool '{tool.name}' is already registered.")
 
         self.tools[tool.name] = tool
 
@@ -66,7 +68,7 @@ class ToolRegistry(ABC):
         name = func.__name__
         doc = inspect.getdoc(func)
         if not doc:
-            raise ValueError(f"Tool '{name}' missing docstring. LLMs need a description of what the tool does.")
+            raise ToolValidationError(f"Tool '{name}' missing docstring. LLMs need a description of what the tool does.")
         description = doc
         signature = inspect.signature(func)
 
@@ -89,7 +91,7 @@ class ToolRegistry(ABC):
                         break
 
             if not has_description:
-                raise ValueError(
+                raise ToolValidationError(
                     f"Parameter '{param_name}' in tool '{name}' is missing a description.\n"
                     f"Usage: {param_name}: Annotated[Type, Field(description='...')] = ..."
                 )
@@ -155,4 +157,3 @@ class ToolRegistry(ABC):
                 schema[key] = [self._resolve_schema_refs(item, defs) for item in schema[key]]
 
         return schema
-

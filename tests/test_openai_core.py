@@ -38,6 +38,7 @@ async def test_ask_method(mock_openai_client):
 
     mock_choice = MagicMock(spec=Choice)
     mock_choice.message = mock_message
+    mock_choice.finish_reason = "stop"
 
     mock_usage = MagicMock(spec=CompletionUsage)
     mock_usage.prompt_tokens = 5
@@ -84,6 +85,7 @@ async def test_chat_method(mock_openai_client):
 
     mock_choice = MagicMock(spec=Choice)
     mock_choice.message = mock_message
+    mock_choice.finish_reason = "stop"
 
     mock_response = MagicMock(spec=ChatCompletion)
     mock_response.choices = [mock_choice]
@@ -144,6 +146,7 @@ async def test_function_calling(mock_openai_client):
     
     choice1 = MagicMock(spec=Choice)
     choice1.message = msg1
+    choice1.finish_reason = "tool_calls"
     
     response1 = MagicMock(spec=ChatCompletion)
     response1.choices = [choice1]
@@ -156,6 +159,7 @@ async def test_function_calling(mock_openai_client):
     
     choice2 = MagicMock(spec=Choice)
     choice2.message = msg2
+    choice2.finish_reason = "stop"
     
     response2 = MagicMock(spec=ChatCompletion)
     response2.choices = [choice2]
@@ -185,8 +189,13 @@ async def test_function_calling(mock_openai_client):
     messages_sent = second_call_args.kwargs["messages"]
     
     # Expected: System, User, Assistant (Tool Call), Tool (Result)
-    assert len(messages_sent) == 4
+    # BUT: The list is modified in place after the call to add the final response.
+    # So we see 5 messages.
+    assert len(messages_sent) == 5
     assert messages_sent[2]["role"] == "assistant"
     assert messages_sent[3]["role"] == "tool"
     assert messages_sent[3]["tool_call_id"] == "call_123"
     assert json.loads(messages_sent[3]["content"]) == {"result": "Tool Result"}
+    # The final answer added after the second call
+    assert messages_sent[4]["role"] == "assistant"
+    assert messages_sent[4]["content"] == "Final answer"

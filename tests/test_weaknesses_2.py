@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, AsyncMock
 from typing import Annotated, List, Dict
 from pydantic import BaseModel, Field
 from llm_core.registry import ToolRegistry
+from llm_core.exceptions import ToolValidationError
 from llm_impl.gemini.core import GenericGemini
 from llm_impl.gemini.registry import GeminiToolRegistry
 
@@ -81,8 +82,8 @@ def test_var_args_registration_failure():
         def flexible_tool(main_arg: Annotated[int, Field(description="Main")], *args: int):
             """A tool with var args."""
             pass
-        pytest.fail("Should have raised ValueError")
-    except ValueError as e:
+        pytest.fail("Should have raised ToolValidationError")
+    except ToolValidationError as e:
         # It fails because *args usually don't have the Annotated wrapper in the same way,
         # or the registry logic doesn't account for Parameter.VAR_POSITIONAL
         assert "missing a description" in str(e) or "args" in str(e)
@@ -273,4 +274,4 @@ async def test_sync_tool_blocks_event_loop(mock_genai_client):
     # If 'chat' blocks the loop for 0.2s, the background task is delayed.
     
     # Assert that the task ran *after* the delay.
-    assert task_ran_time >= start_time + 0.2
+    assert task_ran_time < start_time + 0.1
