@@ -4,8 +4,11 @@ from typing import List, Tuple, Optional, Any, Dict
 import inspect
 import json
 import asyncio
+import logging
 from llm_core import ToolRegistry
 from llm_core.exceptions import ToolExecutionError, ToolNotFoundError
+
+logger = logging.getLogger(__name__)
 
 class ToolHelper:
     def __init__(self,
@@ -14,13 +17,15 @@ class ToolHelper:
                  registry: Optional[ToolRegistry],
                  temperature: float,
                  max_tokens: int,
-                 max_function_loops: int):
+                 max_function_loops: int,
+                 tool_timeout: float = 60.0):
         self.client = client
         self.model = model
         self.registry = registry
         self.temperature = temperature
         self.max_tokens = max_tokens
         self.max_function_loops = max_function_loops
+        self.tool_timeout = tool_timeout
 
     async def handle_function_calls(self,
                                     messages: List[Dict[str, Any]],
@@ -132,9 +137,9 @@ class ToolHelper:
         
         try:
             if inspect.iscoroutinefunction(tool_function):
-                function_result = await tool_function(**function_args)
+                function_result = await asyncio.wait_for(tool_function(**function_args), timeout=self.tool_timeout)
             else:
-                function_result = await asyncio.to_thread(tool_function, **function_args)
+                function_result = await asyncio.wait_for(asyncio.to_thread(tool_function, **function_args), timeout=self.tool_timeout)
 
             messages.append({
                 "role": "tool",
@@ -144,11 +149,20 @@ class ToolHelper:
             })
             return messages, function_result
         
+        except asyncio.TimeoutError:
+            error_message = f"Tool execution timed out after {self.tool_timeout} seconds."
+            logger.warning(f"ToolExecutionError in '{function_name}': {error_message}")
+            messages.append({
+                "role": "tool",
+                "tool_call_id": tool_call_id,
+                "name": function_name,
+                "content": json.dumps({"error": error_message})
+            })
+            return messages, None
         except Exception as e:
-            # Wrap the original exception in a ToolExecutionError for better context if needed,
-            # but here we primarily want to report the error back to the LLM.
-            # We can log the specific exception type if we had a logger.
-            error_message = str(e)
+            # Log the full exception and send a generic error to the LLM
+            logger.error(f"Unexpected error executing tool '{function_name}': {e}", exc_info=True)
+            error_message = "An internal error occurred during tool execution."
             messages.append({
                 "role": "tool",
                 "tool_call_id": tool_call_id,

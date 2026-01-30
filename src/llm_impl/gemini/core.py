@@ -3,11 +3,13 @@ from google.genai import types
 from typing import List, Tuple, Optional, Any
 import inspect
 import asyncio
+import logging
 from google.genai.types import GenerateContentResponse
 from llm_core import GenericLLM, ToolRegistry
 from llm_core.exceptions import ToolExecutionError, ToolNotFoundError
 from .models import GeminiMessageResponse, GeminiChatResponse, GeminiTokens
 
+logger = logging.getLogger(__name__)
 
 class GenericGemini(GenericLLM):
     """
@@ -22,7 +24,8 @@ class GenericGemini(GenericLLM):
                  registry: Optional[ToolRegistry] = None,
                  temp: float = 1.0,
                  max_tokens: int = 100,
-                 max_function_loops: int = 5
+                 max_function_loops: int = 5,
+                 tool_timeout: float = 60.0
                  ):
         """
         Initializes the GenericGemini LLM wrapper.
@@ -35,10 +38,12 @@ class GenericGemini(GenericLLM):
             temp: The temperature for text generation, controlling randomness.
             max_tokens: The maximum number of tokens to generate in the response.
             max_function_loops: The maximum number of consecutive function calls the LLM can make.
+            tool_timeout: The maximum time in seconds to wait for a tool execution.
         """
         self.model: str = model_name
         self.registry: Optional[ToolRegistry] = registry
         self.max_function_loops = max_function_loops
+        self.tool_timeout = tool_timeout
 
         # Only include tools if there are any registered
         tools_config = None
@@ -173,11 +178,14 @@ class GenericGemini(GenericLLM):
 
                     tool_function = tool_def.func
                     # Execute the tool, either async oder sync
-                    if inspect.iscoroutinefunction(tool_function):
-                        function_result = await tool_function(**function_args)
-                    else:
-                        # Run synchronous tools in a thread to avoid blocking the event loop
-                        function_result = await asyncio.to_thread(tool_function, **function_args)
+                    try:
+                        if inspect.iscoroutinefunction(tool_function):
+                            function_result = await asyncio.wait_for(tool_function(**function_args), timeout=self.tool_timeout)
+                        else:
+                            # Run synchronous tools in a thread to avoid blocking the event loop
+                            function_result = await asyncio.wait_for(asyncio.to_thread(tool_function, **function_args), timeout=self.tool_timeout)
+                    except asyncio.TimeoutError:
+                        raise ToolExecutionError(f"Tool execution timed out after {self.tool_timeout} seconds.")
                     
                     # Create the response part
                     parts_to_send.append(
@@ -189,12 +197,22 @@ class GenericGemini(GenericLLM):
                         )
                     )
 
-                except Exception as e:
-                    # Send execution error back to the LLM
+                except ToolExecutionError as e:
+                    # These are expected errors (validation, timeout), so we can send the message
+                    logger.warning(f"ToolExecutionError in '{function_name}': {e}")
                     parts_to_send.append(
                         types.Part(function_response=types.FunctionResponse(
                             name=function_name,
                             response={"error": str(e)},
+                        ))
+                    )
+                except Exception as e:
+                    # Log the full exception and send a generic error to the LLM
+                    logger.error(f"Unexpected error executing tool '{function_name}': {e}", exc_info=True)
+                    parts_to_send.append(
+                        types.Part(function_response=types.FunctionResponse(
+                            name=function_name,
+                            response={"error": "An internal error occurred during tool execution."},
                         ))
                     )
             

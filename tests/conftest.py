@@ -14,3 +14,11 @@ def mock_chat_session():
     chat.send_message.return_value = MagicMock()
     chat.get_history.return_value = []
     return chat
+
+@pytest.fixture
+def mock_openai_client():
+    client = MagicMock()
+    client.chat = MagicMock()
+    client.chat.completions = MagicMock()
+    client.chat.completions.create = AsyncMock()
+    return client

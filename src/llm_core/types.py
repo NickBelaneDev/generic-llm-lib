@@ -35,6 +35,6 @@ class LLMConfig(BaseModel):
                     Must be at least 10.
         system_instruction: An optional system-level instruction or persona for the LLM.
     """
-    temperature: float = Field(default=1.0, ge=0, le=2)
-    max_tokens: int = Field(default=100, ge=10)
+    temperature: float = Field(default=0.7, ge=0, le=2)
+    max_tokens: int = Field(default=1024, ge=10)
     system_instruction: Optional[str] = None

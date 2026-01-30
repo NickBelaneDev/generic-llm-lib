@@ -4,11 +4,14 @@ from typing import List, Tuple, Optional, Any, Dict
 import inspect
 import json
 import asyncio
+import logging
 from llm_core import GenericLLM, ToolRegistry
 from .models import OpenAIMessageResponse, OpenAIChatResponse, OpenAITokens
 from .tool_helper import ToolHelper
 
 import pprint
+
+logger = logging.getLogger(__name__)
 
 class GenericOpenAI(GenericLLM):
     """
@@ -23,7 +26,8 @@ class GenericOpenAI(GenericLLM):
                  registry: Optional[ToolRegistry] = None,
                  temp: float = 1.0,
                  max_tokens: int = 100,
-                 max_function_loops: int = 5
+                 max_function_loops: int = 5,
+                 tool_timeout: float = 60.0
                  ):
         """
         Initializes the GenericOpenAI LLM wrapper.
@@ -36,6 +40,7 @@ class GenericOpenAI(GenericLLM):
             temp: The temperature for text generation, controlling randomness.
             max_tokens: The maximum number of tokens to generate in the response.
             max_function_loops: The maximum number of consecutive function calls the LLM can make.
+            tool_timeout: The maximum time in seconds to wait for a tool execution.
         """
         self.model: str = model_name
         self.registry: Optional[ToolRegistry] = registry
@@ -43,6 +48,7 @@ class GenericOpenAI(GenericLLM):
         self.sys_instruction = sys_instruction
         self.temperature = temp
         self.max_tokens = max_tokens
+        self.tool_timeout = tool_timeout
 
         self.client: AsyncOpenAI = client
         
@@ -52,7 +58,8 @@ class GenericOpenAI(GenericLLM):
             registry=self.registry,
             temperature=self.temperature,
             max_tokens=self.max_tokens,
-            max_function_loops=self.max_function_loops
+            max_function_loops=self.max_function_loops,
+            tool_timeout=self.tool_timeout
         )
 
     async def ask(self, prompt: str, model: str = None) -> OpenAIMessageResponse:
@@ -69,7 +76,7 @@ class GenericOpenAI(GenericLLM):
         """
         # We use a temporary chat session to handle the tool execution loop (Model -> Tool -> Model)
         # We start with an empty history.
-        # print(f"DEBUG: ask() called with prompt: {prompt}")
+        # logger.debug(f"ask() called with prompt: {prompt}")
         response: OpenAIChatResponse = await self.chat([], prompt)
 
         return response.last_response
@@ -94,7 +101,7 @@ class GenericOpenAI(GenericLLM):
             - The updated conversation history, including the user's prompt, LLM's responses,
               and any tool calls/responses.
         """
-        # print(f"DEBUG: chat() called. History length: {len(history)}, User prompt: {user_prompt}")
+        # logger.debug(f"chat() called. History length: {len(history)}, User prompt: {user_prompt}")
 
         # Prepare the messages list. If history is empty, add system instruction first.
         messages = list(history)
@@ -108,10 +115,10 @@ class GenericOpenAI(GenericLLM):
         tools = None
         if self.registry:
             tools = self.registry.tool_object
-            # print(f"DEBUG: Tools registered: {[t.get('function', {}).get('name') for t in tools]}")
+            # logger.debug(f"Tools registered: {[t.get('function', {}).get('name') for t in tools]}")
 
         # Initial call to OpenAI
-        # print(f"DEBUG: Sending initial request to OpenAI model: {self.model}")
+        # logger.debug(f"Sending initial request to OpenAI model: {self.model}")
         response = await self.client.chat.completions.create(
             model=self.model,
             messages=messages,
@@ -121,10 +128,10 @@ class GenericOpenAI(GenericLLM):
         )
         
         if not response.choices:
-            # print(f"DEBUG: Initial response has no choices. Response dump: {response.model_dump()}")
+            # logger.debug(f"Initial response has no choices. Response dump: {response.model_dump()}")
             pass
         else:
-            # print(f"DEBUG: Initial response received. Finish reason: {response.choices[0].finish_reason}")
+            # logger.debug(f"Initial response received. Finish reason: {response.choices[0].finish_reason}")
             pass
 
         # Handle function calls loop
@@ -159,7 +166,7 @@ class GenericOpenAI(GenericLLM):
         Removes intermediate tool calls and outputs from the history to save tokens.
         Keeps user messages, system instructions, and assistant messages that have content.
         """
-        # print(f"DEBUG: Cleaning history. Original size: {len(messages)}")
+        # logger.debug(f"Cleaning history. Original size: {len(messages)}")
         cleaned_messages = []
         for msg in messages:
             role = msg.get("role")
@@ -182,7 +189,7 @@ class GenericOpenAI(GenericLLM):
                 # Keep system and user messages
                 cleaned_messages.append(msg)
         
-        # print(f"DEBUG: History cleaned. New size: {len(cleaned_messages)}")
+        # logger.debug(f"History cleaned. New size: {len(cleaned_messages)}")
         return cleaned_messages
 
     @staticmethod

@@ -203,7 +203,8 @@ async def test_handle_function_calls_error(mock_openai_client, mock_registry):
     assert updated_messages[1]["role"] == "tool"
     content = json.loads(updated_messages[1]["content"])
     assert "error" in content
-    assert content["error"] == "Tool failed"
+    # Updated assertion to match the new sanitized error message
+    assert content["error"] == "An internal error occurred during tool execution."
 
 @pytest.mark.asyncio
 async def test_handle_function_calls_empty_arguments(mock_openai_client, mock_registry):

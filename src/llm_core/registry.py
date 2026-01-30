@@ -141,7 +141,10 @@ class ToolRegistry(ABC):
         """Returns a dictionary mapping function names to their callables."""
         return {name: tool.func for name, tool in self.tools.items()}
 
-    def _resolve_schema_refs(self, schema: dict, defs: dict = None) -> dict:
+    def _resolve_schema_refs(self, schema: dict, defs: dict = None, depth: int = 0, max_depth: int = 20) -> dict:
+        if depth > max_depth:
+            raise RecursionError(f"Max recursion depth ({max_depth}) reached while resolving schema references.")
+
         schema = copy.deepcopy(schema)
 
         if defs is None:
@@ -151,7 +154,7 @@ class ToolRegistry(ABC):
             ref_key = schema["$ref"].split("/")[-1]
             if ref_key in defs:
                 ref_content = defs[ref_key]
-                resolved_content = self._resolve_schema_refs(ref_content, defs)
+                resolved_content = self._resolve_schema_refs(ref_content, defs, depth + 1, max_depth)
 
                 for k, v in resolved_content.items():
                     if k not in schema or k == "$ref":
@@ -162,13 +165,13 @@ class ToolRegistry(ABC):
 
         if "properties" in schema:
             for prop_name, prop_schema in schema["properties"].items():
-                schema["properties"][prop_name] = self._resolve_schema_refs(prop_schema, defs)
+                schema["properties"][prop_name] = self._resolve_schema_refs(prop_schema, defs, depth + 1, max_depth)
 
         if "items" in schema:
-            schema["items"] = self._resolve_schema_refs(schema["items"], defs)
+            schema["items"] = self._resolve_schema_refs(schema["items"], defs, depth + 1, max_depth)
 
         for key in ["anyOf", "allOf", "oneOf"]:
             if key in schema:
-                schema[key] = [self._resolve_schema_refs(item, defs) for item in schema[key]]
+                schema[key] = [self._resolve_schema_refs(item, defs, depth + 1, max_depth) for item in schema[key]]
 
         return schema
