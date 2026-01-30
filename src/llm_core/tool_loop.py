@@ -175,19 +175,27 @@ class ToolExecutionLoop:
     def _normalize_function_args(self, tool_name: str, raw_args: Any) -> Dict[str, Any]:
         if raw_args is None or raw_args == "":
             return {}
+
         if isinstance(raw_args, dict):
             return raw_args
+
         if isinstance(raw_args, str):
             try:
                 parsed = json.loads(raw_args)
+
             except json.JSONDecodeError as exc:
                 raise ToolExecutionError(self._argument_error_formatter(tool_name, exc)) from exc
+
+
             if parsed is None:
                 return {}
+
             if not isinstance(parsed, dict):
                 msg = ValueError("Function arguments must decode to a JSON object.")
                 raise ToolExecutionError(self._argument_error_formatter(tool_name, msg))
+
             return parsed
+
         try:
             return dict(raw_args)
         except (TypeError, ValueError) as exc:
@@ -200,10 +208,12 @@ class ToolExecutionLoop:
                     tool_function(**function_args),
                     timeout=self._tool_timeout,
                 )
+
             return await asyncio.wait_for(
                 asyncio.to_thread(tool_function, **function_args),
                 timeout=self._tool_timeout,
             )
+
         except asyncio.TimeoutError as exc:
             msg = f"Tool execution timed out after {self._tool_timeout} seconds."
             raise ToolExecutionError(msg) from exc
