@@ -70,7 +70,7 @@ Tools require type hints with `Annotated` and `Field` descriptions to generate p
 ```python
 from typing import Annotated
 from pydantic import Field
-from src.llm_core.registry import ToolRegistry
+from llm_core.registry import ToolRegistry
 
 # Assuming a concrete implementation of ToolRegistry exists
 registry = MyProviderRegistry()
@@ -89,7 +89,7 @@ def get_weather(
 To add a new LLM provider, subclass `GenericLLM` and implement the abstract methods.
 
 ```python
-from src.llm_core.base import GenericLLM
+from llm_core.base import GenericLLM
 
 class MyLLM(GenericLLM):
     async def chat(self, history, user_prompt):
