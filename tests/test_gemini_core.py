@@ -31,7 +31,7 @@ async def test_ask_method(mock_genai_client, mock_chat_session):
         thoughts_token_count=0,
         tool_use_prompt_token_count=0
     )
-    mock_chat_session.send_message.return_value = mock_response
+    mock_chat_session.send_message = MagicMock(return_value=mock_response)
     
     gemini = GenericGemini(
         client=mock_genai_client,
@@ -56,7 +56,7 @@ async def test_chat_method(mock_genai_client, mock_chat_session):
     mock_response = MagicMock()
     mock_response.parts = [MagicMock(text="Chat response", function_call=None)]
     mock_response.usage_metadata = None
-    mock_chat_session.send_message.return_value = mock_response
+    mock_chat_session.send_message = MagicMock(return_value=mock_response)
     
     # Mock history content to satisfy Pydantic validation
     mock_content = MagicMock()
@@ -92,6 +92,7 @@ async def test_function_calling(mock_genai_client, mock_chat_session):
     mock_tool_def.func = mock_tool
     mock_tool_def.parameters = {} # Mock parameters
     mock_tool_def.description = "Test tool"
+    mock_tool_def.args_model = None # Mock args_model
     
     registry.tools["test_tool"] = mock_tool_def
     
@@ -110,7 +111,7 @@ async def test_function_calling(mock_genai_client, mock_chat_session):
     response2.usage_metadata = None
     
     # Configure mock to return sequence of responses
-    mock_chat_session.send_message.side_effect = [response1, response2]
+    mock_chat_session.send_message = MagicMock(side_effect=[response1, response2])
     
     # Mock history for the chat response construction
     mock_content = MagicMock()
@@ -144,6 +145,7 @@ async def test_function_calling_with_empty_args(mock_genai_client, mock_chat_ses
     mock_tool_def.func = mock_tool
     mock_tool_def.parameters = {}
     mock_tool_def.description = "Tool with empty args"
+    mock_tool_def.args_model = None
 
     registry.tools["empty_args_tool"] = mock_tool_def
 
@@ -159,7 +161,7 @@ async def test_function_calling_with_empty_args(mock_genai_client, mock_chat_ses
     response2.parts = [MagicMock(text="Final answer", function_call=None)]
     response2.usage_metadata = None
 
-    mock_chat_session.send_message.side_effect = [response1, response2]
+    mock_chat_session.send_message = MagicMock(side_effect=[response1, response2])
 
     mock_content = MagicMock()
     mock_content.role = "model"

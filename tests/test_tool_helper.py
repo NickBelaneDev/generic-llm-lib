@@ -19,7 +19,7 @@ def mock_openai_client():
 def mock_registry():
     registry = MagicMock(spec=ToolRegistry)
     registry.tool_object = [{"type": "function", "function": {"name": "test_tool"}}]
-    registry.implementations = {}
+    registry.tools = {}
     return registry
 
 @pytest.mark.asyncio
@@ -75,7 +75,10 @@ async def test_handle_function_calls_no_calls(mock_openai_client, mock_registry)
 async def test_handle_function_calls_execution(mock_openai_client, mock_registry):
     # Setup mock tool
     mock_tool_func = AsyncMock(return_value="Success")
-    mock_registry.implementations = {"test_tool": mock_tool_func}
+    mock_tool_def = MagicMock()
+    mock_tool_def.func = mock_tool_func
+    mock_tool_def.args_model = None
+    mock_registry.tools = {"test_tool": mock_tool_def}
 
     helper = ToolHelper(
         client=mock_openai_client,
@@ -143,7 +146,10 @@ async def test_handle_function_calls_execution(mock_openai_client, mock_registry
 async def test_handle_function_calls_error(mock_openai_client, mock_registry):
     # Setup mock tool that raises exception
     mock_tool_func = AsyncMock(side_effect=Exception("Tool failed"))
-    mock_registry.implementations = {"test_tool": mock_tool_func}
+    mock_tool_def = MagicMock()
+    mock_tool_def.func = mock_tool_func
+    mock_tool_def.args_model = None
+    mock_registry.tools = {"test_tool": mock_tool_def}
 
     helper = ToolHelper(
         client=mock_openai_client,
@@ -202,7 +208,10 @@ async def test_handle_function_calls_error(mock_openai_client, mock_registry):
 @pytest.mark.asyncio
 async def test_handle_function_calls_empty_arguments(mock_openai_client, mock_registry):
     mock_tool_func = AsyncMock(return_value="Success")
-    mock_registry.implementations = {"test_tool": mock_tool_func}
+    mock_tool_def = MagicMock()
+    mock_tool_def.func = mock_tool_func
+    mock_tool_def.args_model = None
+    mock_registry.tools = {"test_tool": mock_tool_def}
 
     helper = ToolHelper(
         client=mock_openai_client,
@@ -254,7 +263,10 @@ async def test_handle_function_calls_empty_arguments(mock_openai_client, mock_re
 @pytest.mark.asyncio
 async def test_handle_function_calls_invalid_arguments(mock_openai_client, mock_registry):
     mock_tool_func = AsyncMock(return_value="Success")
-    mock_registry.implementations = {"test_tool": mock_tool_func}
+    mock_tool_def = MagicMock()
+    mock_tool_def.func = mock_tool_func
+    mock_tool_def.args_model = None
+    mock_registry.tools = {"test_tool": mock_tool_def}
 
     helper = ToolHelper(
         client=mock_openai_client,

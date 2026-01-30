@@ -125,6 +125,7 @@ async def test_function_calling(mock_openai_client):
     mock_tool_def.func = mock_tool
     mock_tool_def.parameters = {} 
     mock_tool_def.description = "Test tool"
+    mock_tool_def.args_model = None
     
     registry.tools["test_tool"] = mock_tool_def
     

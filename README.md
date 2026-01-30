@@ -1,21 +1,25 @@
 # Generic LLM Library
 
-A flexible, async-first library designed for building scalable agents and chatbots. It provides a unified interface for interacting with Large Language Models (LLMs) like Google Gemini, automating complex tasks like function calling loops while remaining lightweight enough for quick server-side deployments.
+A flexible, async-first library designed for building scalable agents and chatbots. It provides a unified interface for interacting with Large Language Models (LLMs) like Google Gemini and OpenAI, automating complex tasks like function calling loops while remaining lightweight enough for quick server-side deployments.
 
 ## Features
 
 - **Async-First Architecture**: Built from the ground up for high-performance, non-blocking operations, making it ideal for server environments.
 - **Flexible Agent System**: Create adaptable agents capable of handling complex interactions and tool usage.
-- **Unified Interface**: Abstract away provider differences (starting with Gemini) behind a consistent API.
+- **Unified Interface**: Abstract away provider differences (Gemini, OpenAI) behind a consistent API.
 - **Automated Function Calling**: Seamlessly handles the "Model -> Tool -> Model" execution loop.
 - **Tool Registry**: Simple decorator-based registration to turn Python functions into LLM-accessible tools.
 - **Chatbot Ready**: Designed to be quickly integrated into web backends for powering chatbots.
 
 ## Usage
 
+### Google Gemini
+
 ```python
 from llm_impl import GenericGemini, GeminiToolRegistry
 from google import genai
+from pydantic import Field
+from typing import Annotated
 import asyncio
 
 # 1. Create a registry
@@ -23,7 +27,8 @@ registry = GeminiToolRegistry()
 
 # 2. Register tools
 @registry.tool # makes the function a tool
-def get_weather(location: str):
+def get_weather(location: Annotated[str, Field(description="The city and state, e.g. San Francisco, CA")]):
+    """Get the current weather in a given location"""
     return f"Sunny in {location}"
 
 # 3. Initialize
@@ -38,6 +43,39 @@ async def main():
     print(gemini_chat.history)
     
 
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+### OpenAI
+
+```python
+from llm_impl import GenericOpenAI, OpenAIToolRegistry
+from openai import AsyncOpenAI
+from pydantic import Field
+from typing import Annotated
+import asyncio
+
+# 1. Create a registry
+registry = OpenAIToolRegistry()
+
+# 2. Register tools
+@registry.tool
+def get_weather(location: Annotated[str, Field(description="The city and state, e.g. San Francisco, CA")]):
+    """Get the current weather in a given location"""
+    return f"Sunny in {location}"
+
+# 3. Initialize
+client = AsyncOpenAI(api_key="YOUR_KEY")
+llm = GenericOpenAI(client, "gpt-4o", "You are helpful.", registry)
+
+# 4. Chat
+async def main():
+    openai_chat = await llm.chat([], "Weather in Berlin?")
+    print(openai_chat.last_response.text)
+    print(openai_chat.last_response.tokens.total_tokens)
+    print(openai_chat.history)
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -29,10 +29,10 @@ async def test_arg_type_coercion_failure(mock_genai_client):
     response_call.parts = [MagicMock(function_call=func_call, text=None)]
     
     response_final = MagicMock()
-    response_final.parts = [MagicMock(text="Result is 1020", function_call=None)]
+    response_final.parts = [MagicMock(text="Result is 30", function_call=None)]
     response_final.usage_metadata = None
 
-    mock_chat.send_message.side_effect = [response_call, response_final]
+    mock_chat.send_message = MagicMock(side_effect=[response_call, response_final])
     
     # Mock history for chat response construction
     mock_content = MagicMock()
@@ -62,7 +62,7 @@ async def test_arg_type_coercion_failure(mock_genai_client):
     tool_result = sent_parts[0].function_response.response["result"]
     
     # If coercion worked, it should be 30. If not, it's "1020".
-    assert tool_result == "1020" # Confirms weakness: No coercion happened.
+    assert tool_result == 30 # Confirms weakness: No coercion happened.
 
 # --- Weakness 7: *args and **kwargs Incompatibility ---
 def test_var_args_registration_failure():
@@ -107,7 +107,7 @@ async def test_ask_hides_tool_execution_details(mock_genai_client):
     resp_tool = MagicMock(parts=[MagicMock(function_call=func_call, text=None)])
     resp_final = MagicMock(parts=[MagicMock(text="Done", function_call=None)], usage_metadata=None)
     
-    mock_chat.send_message.side_effect = [resp_tool, resp_final]
+    mock_chat.send_message = MagicMock(side_effect=[resp_tool, resp_final])
     
     # Mock history for chat response construction
     mock_content = MagicMock()
@@ -193,7 +193,7 @@ async def test_sync_tool_blocks_event_loop(mock_genai_client):
     
     resp_call = MagicMock(parts=[MagicMock(function_call=func_call, text=None)])
     resp_final = MagicMock(parts=[MagicMock(text="Done", function_call=None)], usage_metadata=None)
-    mock_chat.send_message.side_effect = [resp_call, resp_final]
+    mock_chat.send_message = MagicMock(side_effect=[resp_call, resp_final])
     
     # Mock history for chat response construction
     mock_content = MagicMock()

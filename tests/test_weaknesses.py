@@ -86,7 +86,7 @@ async def test_max_function_loops_exceeded(mock_genai_client):
     func_call_response.usage_metadata = None
 
     # The chat session always returns a function call request
-    mock_chat.send_message.return_value = func_call_response
+    mock_chat.send_message = MagicMock(return_value=func_call_response)
 
     # Registry with the tool
     registry = GeminiToolRegistry()
@@ -145,7 +145,7 @@ async def test_non_serializable_tool_return_crash(mock_genai_client):
         
         return llm_request # Return same request to keep loop going (if it didn't crash)
 
-    mock_chat.send_message.side_effect = send_message_side_effect
+    mock_chat.send_message = MagicMock(side_effect=send_message_side_effect)
 
     # Registry
     registry = GeminiToolRegistry()
@@ -189,7 +189,7 @@ async def test_empty_prompt_handling(mock_genai_client):
             raise Exception("400 Invalid Argument: Prompt cannot be empty")
         return MagicMock(parts=[MagicMock(text="OK")])
         
-    mock_chat.send_message.side_effect = side_effect
+    mock_chat.send_message = MagicMock(side_effect=side_effect)
 
     gemini = GenericGemini(client=mock_genai_client, model_name="gemini-pro", sys_instruction="sys")
 

@@ -1,4 +1,4 @@
-from typing import Optional, Any, Callable
+from typing import Optional, Any, Callable, Type
 from pydantic import BaseModel, Field
 
 # Placeholder for future generic types to decouple from provider specific types
@@ -15,11 +15,13 @@ class ToolDefinition(BaseModel):
         parameters: A schema (e.g., JSON schema) defining the input parameters
                     for the tool's function. This can be a dictionary or a provider-specific
                     schema object.
+        args_model: Optional Pydantic model used for validating and coercing arguments.
     """
     name: str
     description: str
     func: Callable
     parameters: Optional[Any] = None
+    args_model: Optional[Type[BaseModel]] = None
 
 
 class LLMConfig(BaseModel):

@@ -31,7 +31,7 @@ class ToolRegistry(ABC):
         self.tools: Dict[str, ToolDefinition] = {}
 
     def register(self,
-                 name_or_tool: Union[str, ToolDefinition],
+                 name_or_tool: Union[str, ToolDefinition, Callable],
                  description: Optional[str] = None,
                  func: Optional[Callable] = None,
                  parameters: Optional[Any] = None):
@@ -39,13 +39,14 @@ class ToolRegistry(ABC):
         Register a new tool for the LLM.
 
         This method allows registering a tool either by providing a `ToolDefinition` object
-        directly or by providing the individual components (name, description, function, parameters).
+        directly, by providing the individual components (name, description, function, parameters),
+        or by providing a function (Callable) to automatically generate the definition.
 
         Args:
-            name_or_tool: Either a `ToolDefinition` object or the name of the tool (str).
-            description: A brief description of what the tool does. Required if `name_or_tool` is a string.
+            name_or_tool: Either a `ToolDefinition` object, the name of the tool (str), or a Callable.
+            description: A brief description of what the tool does. Required if `name_or_tool` is a string and parameters are provided.
             func: The callable function implementing the tool's logic. Required if `name_or_tool` is a string.
-            parameters: A schema defining the tool's input parameters. Required if `name_or_tool` is a string.
+            parameters: A schema defining the tool's input parameters. If None, it will be inferred from `func`.
 
         Raises:
             ToolRegistrationError: If individual arguments are provided but some are missing or if the tool already exists.
@@ -53,25 +54,35 @@ class ToolRegistry(ABC):
 
         if isinstance(name_or_tool, ToolDefinition):
             tool = name_or_tool
+        elif callable(name_or_tool):
+            tool = self._generate_tool_definition(name_or_tool, description=description)
         else:
-            if description is None or func is None or parameters is None:
-                raise ToolRegistrationError("If passing name as string; description, func, and parameters are required.")
-            tool = ToolDefinition(name=name_or_tool, description=description, func=func, parameters=parameters)
+            # name_or_tool is a string (name)
+            if func is None:
+                raise ToolRegistrationError("If passing name as string, func is required.")
+
+            if parameters is None:
+                tool = self._generate_tool_definition(func, name=name_or_tool, description=description)
+            else:
+                if description is None:
+                    raise ToolRegistrationError("If passing name and parameters, description is required.")
+                tool = ToolDefinition(name=name_or_tool, description=description, func=func, parameters=parameters)
 
         if tool.name in self.tools:
              raise ToolRegistrationError(f"Tool '{tool.name}' is already registered.")
 
         self.tools[tool.name] = tool
 
-    def tool(self, func: Callable) -> Callable:
-        """A decorator to turn a function into a Gemini tool"""
-        name = func.__name__
-        doc = inspect.getdoc(func)
-        if not doc:
-            raise ToolValidationError(f"Tool '{name}' missing docstring. LLMs need a description of what the tool does.")
-        description = doc
-        signature = inspect.signature(func)
+    def _generate_tool_definition(self, func: Callable, name: Optional[str] = None, description: Optional[str] = None) -> ToolDefinition:
+        tool_name = name or func.__name__
 
+        if description is None:
+            doc = inspect.getdoc(func)
+            if not doc:
+                raise ToolValidationError(f"Tool '{tool_name}' missing docstring. LLMs need a description of what the tool does.")
+            description = doc
+
+        signature = inspect.signature(func)
         fields = {}
 
         for param_name, param in signature.parameters.items():
@@ -92,27 +103,31 @@ class ToolRegistry(ABC):
 
             if not has_description:
                 raise ToolValidationError(
-                    f"Parameter '{param_name}' in tool '{name}' is missing a description.\n"
+                    f"Parameter '{param_name}' in tool '{tool_name}' is missing a description.\n"
                     f"Usage: {param_name}: Annotated[Type, Field(description='...')] = ..."
                 )
 
             pydantic_default = default if default != inspect.Parameter.empty else ...
             fields[param_name] = (annotation, pydantic_default)
 
-        DynamicParamsModel: BaseModel = create_model(f"{name}Params", **fields)
+        DynamicParamsModel: BaseModel = create_model(f"{tool_name}Params", **fields)
 
         raw_schema = DynamicParamsModel.model_json_schema()
         parameters_schema = self._resolve_schema_refs(raw_schema)
 
         parameters_schema.pop("title", None)
 
-        self.register(
-            name_or_tool=name,
-            description=description,
-            func=func,
-            parameters=parameters_schema
+        return ToolDefinition(
+            name=tool_name, 
+            description=description, 
+            func=func, 
+            parameters=parameters_schema,
+            args_model=DynamicParamsModel
         )
 
+    def tool(self, func: Callable) -> Callable:
+        """A decorator to turn a function into a Gemini tool"""
+        self.register(func)
         return func
 
     @property

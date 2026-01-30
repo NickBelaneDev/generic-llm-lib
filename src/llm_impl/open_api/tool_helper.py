@@ -58,7 +58,7 @@ class ToolHelper:
                     })
                     continue
 
-                if not self.registry or function_name not in self.registry.implementations:
+                if not self.registry or function_name not in self.registry.tools:
                     error_msg = f"Tool '{function_name}' not found in registry."
                     messages.append({
                         "role": "tool",
@@ -68,11 +68,28 @@ class ToolHelper:
                     })
                     continue
                 
+                tool_def = self.registry.tools[function_name]
+
+                # Validate and coerce arguments using the Pydantic model if available
+                if tool_def.args_model:
+                    try:
+                        validated_args = tool_def.args_model(**function_args)
+                        function_args = validated_args.model_dump()
+                    except Exception as validation_error:
+                        messages.append({
+                            "role": "tool",
+                            "tool_call_id": tool_call_id,
+                            "name": function_name,
+                            "content": json.dumps({"error": f"Argument validation failed: {validation_error}"})
+                        })
+                        continue
+
                 messages, function_result = await self._execute_tool(
-                    function_name,
+                    tool_def.func,
                     function_args,
                     messages,
-                    tool_call_id
+                    tool_call_id,
+                    function_name
                 )
             
             current_response = await self.client.chat.completions.create(
@@ -107,13 +124,13 @@ class ToolHelper:
         return parsed
 
     async def _execute_tool(self,
-                            function_name: str,
+                            tool_function: Any,
                             function_args: Dict[str, Any],
                             messages: List[Dict[str, Any]],
-                            tool_call_id: str) -> Tuple[List[Dict[str, Any]], Any]:
+                            tool_call_id: str,
+                            function_name: str) -> Tuple[List[Dict[str, Any]], Any]:
         
         try:
-            tool_function = self.registry.implementations[function_name]
             if inspect.iscoroutinefunction(tool_function):
                 function_result = await tool_function(**function_args)
             else:

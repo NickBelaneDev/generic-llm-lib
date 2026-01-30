@@ -148,7 +148,7 @@ class GenericGemini(GenericLLM):
             for function_call in function_calls:
                 function_name = function_call.name
 
-                if not self.registry or function_name not in self.registry.implementations:
+                if not self.registry or function_name not in self.registry.tools:
                     # If tool is not found, report error to LLM
                     parts_to_send.append(
                         types.Part(function_response=types.FunctionResponse(
@@ -158,9 +158,20 @@ class GenericGemini(GenericLLM):
                     )
                     continue
 
+                tool_def = self.registry.tools[function_name]
+                
                 try:
                     function_args = self._normalize_function_args(function_call)
-                    tool_function = self.registry.implementations[function_name]
+                    
+                    # Validate and coerce arguments using the Pydantic model if available
+                    if tool_def.args_model:
+                        try:
+                            validated_args = tool_def.args_model(**function_args)
+                            function_args = validated_args.model_dump()
+                        except Exception as validation_error:
+                             raise ToolExecutionError(f"Argument validation failed: {validation_error}")
+
+                    tool_function = tool_def.func
                     # Execute the tool, either async oder sync
                     if inspect.iscoroutinefunction(tool_function):
                         function_result = await tool_function(**function_args)

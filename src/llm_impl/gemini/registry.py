@@ -26,7 +26,7 @@ class GeminiToolRegistry(ToolRegistry):
         self.tools: Dict[str, ToolDefinition] = {}
 
     def register(self,
-                 name_or_tool: Union[str, ToolDefinition],
+                 name_or_tool: Union[str, ToolDefinition, Callable],
                  description: Optional[str] = None,
                  func: Optional[Callable] = None,
                  parameters: Optional[Any] = None):
@@ -36,9 +36,10 @@ class GeminiToolRegistry(ToolRegistry):
         This method supports two ways of registration:
         1. Passing a `ToolDefinition` object as the first argument.
         2. Passing individual arguments: `name`, `description`, `func`, and `parameters`.
+        3. Passing a Callable as the first argument to automatically generate the definition.
 
         Args:
-            name_or_tool: Either a `ToolDefinition` object or the name of the tool (str).
+            name_or_tool: Either a `ToolDefinition` object, the name of the tool (str), or a Callable.
             description: A description of what the tool does. Required if `name_or_tool` is a string.
             func: The callable function implementing the tool's logic. Required if `name_or_tool` is a string.
             parameters: A dictionary or types.Schema defining the tool's input parameters. Required if `name_or_tool` is a string.
