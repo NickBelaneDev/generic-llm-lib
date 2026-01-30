@@ -11,19 +11,33 @@ A flexible, async-first library designed for building scalable agents and chatbo
 - **Tool Registry**: Simple decorator-based registration to turn Python functions into LLM-accessible tools.
 - **Chatbot Ready**: Designed to be quickly integrated into web backends for powering chatbots.
 
+## Installation
+
+Install the package via pip:
+
+```bash
+pip install generic-llm-lib
+```
+
+Or using [uv](https://github.com/astral-sh/uv):
+
+```bash
+uv add generic-llm-lib
+```
+
 ## Usage
 
-### Google Gemini
+### Generic Agent
 
 ```python
-from llm_impl import GenericGemini, GeminiToolRegistry
+from llm_impl import OpenAIToolRegistry, GenericOpenAI
 from google import genai
 from pydantic import Field
 from typing import Annotated
 import asyncio
 
 # 1. Create a registry
-registry = GeminiToolRegistry()
+registry = OpenAIToolRegistry() # Replace this with GeminiToolRegistry if you want to use gemini
 
 # 2. Register tools
 @registry.tool # makes the function a tool
@@ -33,7 +47,7 @@ def get_weather(location: Annotated[str, Field(description="The city and state, 
 
 # 3. Initialize
 client = genai.Client(api_key="YOUR_KEY")
-llm = GenericGemini(client, "gemini-2.0-flash-exp", "You are helpful.", registry)
+llm = GenericOpenAI(client, "gemini-2.0-flash-exp", "You are helpful.", registry) # Replace with GenericGemini if you want to use gemini
 
 # 4. Chat
 async def main():
@@ -43,39 +57,6 @@ async def main():
     print(gemini_chat.history)
     
 
-
-if __name__ == "__main__":
-    asyncio.run(main())
-```
-
-### OpenAI
-
-```python
-from llm_impl import GenericOpenAI, OpenAIToolRegistry
-from openai import AsyncOpenAI
-from pydantic import Field
-from typing import Annotated
-import asyncio
-
-# 1. Create a registry
-registry = OpenAIToolRegistry()
-
-# 2. Register tools
-@registry.tool
-def get_weather(location: Annotated[str, Field(description="The city and state, e.g. San Francisco, CA")]):
-    """Get the current weather in a given location"""
-    return f"Sunny in {location}"
-
-# 3. Initialize
-client = AsyncOpenAI(api_key="YOUR_KEY")
-llm = GenericOpenAI(client, "gpt-4o", "You are helpful.", registry)
-
-# 4. Chat
-async def main():
-    openai_chat = await llm.chat([], "Weather in Berlin?")
-    print(openai_chat.last_response.text)
-    print(openai_chat.last_response.tokens.total_tokens)
-    print(openai_chat.history)
 
 if __name__ == "__main__":
     asyncio.run(main())
