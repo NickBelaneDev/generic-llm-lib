@@ -1,15 +1,10 @@
 from google import genai
 from google.genai import types
-from typing import List, Tuple, Optional, Any
-import inspect
-import asyncio
-import logging
+from typing import List, Tuple, Optional, Any, Sequence
 from google.genai.types import GenerateContentResponse
 from llm_core import GenericLLM, ToolRegistry
-from llm_core.exceptions import ToolExecutionError, ToolNotFoundError
+from llm_core.tool_loop import ToolExecutionLoop, ToolCallRequest, ToolCallResult
 from .models import GeminiMessageResponse, GeminiChatResponse, GeminiTokens
-
-logger = logging.getLogger(__name__)
 
 class GenericGemini(GenericLLM):
     """
@@ -44,6 +39,11 @@ class GenericGemini(GenericLLM):
         self.registry: Optional[ToolRegistry] = registry
         self.max_function_loops = max_function_loops
         self.tool_timeout = tool_timeout
+        self._tool_loop = ToolExecutionLoop(
+            registry=registry,
+            max_function_loops=max_function_loops,
+            tool_timeout=tool_timeout,
+        )
 
         # Only include tools if there are any registered
         tools_config = None
@@ -139,102 +139,42 @@ class GenericGemini(GenericLLM):
             Tuple[GenerateContentResponse, Any]: The final response from the model and the updated chat object.
         """
         
-        for _ in range(self.max_function_loops):
-            # Collect all function calls from the response parts
-            # Gemini can return multiple function calls in a single turn (parallel function calling)
-            function_calls = [p.function_call for p in (response.parts or []) if p.function_call]
-            
-            if not function_calls:
-                # If there are no function calls, we have our final text response.
-                break
+        if not response:
+            return response, chat
 
-            parts_to_send = []
+        final_response = await self._tool_loop.run(
+            initial_response=response,
+            get_tool_calls=self._get_tool_calls,
+            record_assistant_message=lambda _response: None,
+            build_tool_response_message=self._build_tool_response_message,
+            send_tool_responses=lambda parts: self._send_tool_messages(chat, parts),
+        )
 
-            for function_call in function_calls:
-                function_name = function_call.name
-
-                if not self.registry or function_name not in self.registry.tools:
-                    # If tool is not found, report error to LLM
-                    parts_to_send.append(
-                        types.Part(function_response=types.FunctionResponse(
-                            name=function_name,
-                            response={"error": f"Tool '{function_name}' not found in registry."},
-                        ))
-                    )
-                    continue
-
-                tool_def = self.registry.tools[function_name]
-                
-                try:
-                    function_args = self._normalize_function_args(function_call)
-                    
-                    # Validate and coerce arguments using the Pydantic model if available
-                    if tool_def.args_model:
-                        try:
-                            validated_args = tool_def.args_model(**function_args)
-                            function_args = validated_args.model_dump()
-                        except Exception as validation_error:
-                             raise ToolExecutionError(f"Argument validation failed: {validation_error}")
-
-                    tool_function = tool_def.func
-                    # Execute the tool, either async oder sync
-                    try:
-                        if inspect.iscoroutinefunction(tool_function):
-                            function_result = await asyncio.wait_for(tool_function(**function_args), timeout=self.tool_timeout)
-                        else:
-                            # Run synchronous tools in a thread to avoid blocking the event loop
-                            function_result = await asyncio.wait_for(asyncio.to_thread(tool_function, **function_args), timeout=self.tool_timeout)
-                    except asyncio.TimeoutError:
-                        raise ToolExecutionError(f"Tool execution timed out after {self.tool_timeout} seconds.")
-                    
-                    # Create the response part
-                    parts_to_send.append(
-                        types.Part(
-                            function_response=types.FunctionResponse(
-                                name=function_name,
-                                response={"result": function_result},
-                            )
-                        )
-                    )
-
-                except ToolExecutionError as e:
-                    # These are expected errors (validation, timeout), so we can send the message
-                    logger.warning(f"ToolExecutionError in '{function_name}': {e}")
-                    parts_to_send.append(
-                        types.Part(function_response=types.FunctionResponse(
-                            name=function_name,
-                            response={"error": str(e)},
-                        ))
-                    )
-                except Exception as e:
-                    # Log the full exception and send a generic error to the LLM
-                    logger.error(f"Unexpected error executing tool '{function_name}': {e}", exc_info=True)
-                    parts_to_send.append(
-                        types.Part(function_response=types.FunctionResponse(
-                            name=function_name,
-                            response={"error": "An internal error occurred during tool execution."},
-                        ))
-                    )
-            
-            # Send all function results back to the model in a single message
-            if parts_to_send:
-                response = chat.send_message(parts_to_send)
-                
-        return response, chat
+        return final_response, chat
 
     @staticmethod
-    def _normalize_function_args(function_call: Any) -> dict:
-        raw_args = getattr(function_call, "args", None)
-        if raw_args is None:
-            return {}
-        if isinstance(raw_args, dict):
-            return raw_args
-        try:
-            return dict(raw_args)
-        except (TypeError, ValueError) as exc:
-            raise ToolExecutionError(
-                f"Failed to parse arguments for tool '{function_call.name}': {exc}"
-            ) from exc
+    def _get_tool_calls(response: GenerateContentResponse) -> Sequence[ToolCallRequest]:
+        function_calls = [p.function_call for p in (response.parts or []) if p.function_call]
+        return [
+            ToolCallRequest(
+                name=function_call.name,
+                arguments=getattr(function_call, "args", None),
+            )
+            for function_call in function_calls
+        ]
+
+    @staticmethod
+    def _build_tool_response_message(tool_result: ToolCallResult) -> types.Part:
+        return types.Part(
+            function_response=types.FunctionResponse(
+                name=tool_result.name,
+                response=tool_result.response,
+            )
+        )
+
+    @staticmethod
+    def _send_tool_messages(chat: Any, parts: Sequence[types.Part]) -> Any:
+        return chat.send_message(list(parts))
 
     def _clean_history(self, history: List[types.Content]) -> List[types.Content]:
         """

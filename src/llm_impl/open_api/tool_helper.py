@@ -1,14 +1,10 @@
 from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletion
-from typing import List, Tuple, Optional, Any, Dict
-import inspect
+from typing import List, Tuple, Optional, Any, Dict, Sequence
 import json
-import asyncio
-import logging
 from llm_core import ToolRegistry
-from llm_core.exceptions import ToolExecutionError, ToolNotFoundError
+from llm_core.tool_loop import ToolExecutionLoop, ToolCallRequest, ToolCallResult
 
-logger = logging.getLogger(__name__)
 
 class ToolHelper:
     def __init__(self,
@@ -26,147 +22,76 @@ class ToolHelper:
         self.max_tokens = max_tokens
         self.max_function_loops = max_function_loops
         self.tool_timeout = tool_timeout
+        self._tool_loop = ToolExecutionLoop(
+            registry=registry,
+            max_function_loops=max_function_loops,
+            tool_timeout=tool_timeout,
+            argument_error_formatter=self._format_argument_error,
+        )
 
     async def handle_function_calls(self,
                                     messages: List[Dict[str, Any]],
                                     initial_response: ChatCompletion) -> Tuple[List[Dict[str, Any]], ChatCompletion]:
-        
-        current_response = initial_response
         tools = self.registry.tool_object if self.registry else None
 
-        if not current_response.choices:
-            return messages, current_response
+        if not initial_response.choices:
+            return messages, initial_response
 
-        current_message = current_response.choices[0].message
-        
-        for loop_index in range(self.max_function_loops):
-            tool_calls = current_message.tool_calls
-            
-            if not tool_calls:
-                messages.append(current_message.model_dump())
-                return messages, current_response
+        final_response = await self._tool_loop.run(
+            initial_response=initial_response,
+            get_tool_calls=self._get_tool_calls,
+            record_assistant_message=lambda response: messages.append(
+                response.choices[0].message.model_dump()
+            ),
+            build_tool_response_message=self._build_tool_response_message,
+            send_tool_responses=lambda tool_messages: self._send_tool_messages(
+                messages,
+                tool_messages,
+                tools,
+            ),
+        )
 
-            messages.append(current_message.model_dump())
+        return messages, final_response
 
-            for tool_call in tool_calls:
-                function_name = tool_call.function.name
-                tool_call_id = tool_call.id
-                
-                try:
-                    function_args = self._parse_tool_arguments(tool_call.function.arguments)
-                except ValueError as e:
-                    messages.append({
-                        "role": "tool",
-                        "tool_call_id": tool_call_id,
-                        "name": function_name,
-                        "content": json.dumps({"error": f"Failed to decode function arguments: {e}"})
-                    })
-                    continue
-
-                if not self.registry or function_name not in self.registry.tools:
-                    error_msg = f"Tool '{function_name}' not found in registry."
-                    messages.append({
-                        "role": "tool",
-                        "tool_call_id": tool_call_id,
-                        "name": function_name,
-                        "content": json.dumps({"error": error_msg})
-                    })
-                    continue
-                
-                tool_def = self.registry.tools[function_name]
-
-                # Validate and coerce arguments using the Pydantic model if available
-                if tool_def.args_model:
-                    try:
-                        validated_args = tool_def.args_model(**function_args)
-                        function_args = validated_args.model_dump()
-                    except Exception as validation_error:
-                        messages.append({
-                            "role": "tool",
-                            "tool_call_id": tool_call_id,
-                            "name": function_name,
-                            "content": json.dumps({"error": f"Argument validation failed: {validation_error}"})
-                        })
-                        continue
-
-                messages, function_result = await self._execute_tool(
-                    tool_def.func,
-                    function_args,
-                    messages,
-                    tool_call_id,
-                    function_name
-                )
-            
-            current_response = await self.client.chat.completions.create(
-                model=self.model,
-                messages=messages,
-                tools=tools,
-                temperature=self.temperature,
-                max_tokens=self.max_tokens
+    def _get_tool_calls(self, response: ChatCompletion) -> Sequence[ToolCallRequest]:
+        if not response.choices:
+            return []
+        tool_calls = response.choices[0].message.tool_calls
+        if not tool_calls:
+            return []
+        return [
+            ToolCallRequest(
+                name=tool_call.function.name,
+                arguments=tool_call.function.arguments,
+                call_id=tool_call.id,
             )
-            
-            if not current_response.choices:
-                return messages, current_response
-
-            current_message = current_response.choices[0].message
-            
-        messages.append(current_message.model_dump())
-        
-        return messages, current_response
+            for tool_call in tool_calls
+        ]
 
     @staticmethod
-    def _parse_tool_arguments(arguments: Optional[str]) -> Dict[str, Any]:
-        if not arguments:
-            return {}
-        try:
-            parsed = json.loads(arguments)
-        except json.JSONDecodeError as exc:
-            raise ValueError(str(exc)) from exc
-        if parsed is None:
-            return {}
-        if not isinstance(parsed, dict):
-            raise ValueError("Function arguments must decode to a JSON object.")
-        return parsed
+    def _build_tool_response_message(tool_result: ToolCallResult) -> Dict[str, Any]:
+        return {
+            "role": "tool",
+            "tool_call_id": tool_result.call_id,
+            "name": tool_result.name,
+            "content": json.dumps(tool_result.response),
+        }
 
-    async def _execute_tool(self,
-                            tool_function: Any,
-                            function_args: Dict[str, Any],
-                            messages: List[Dict[str, Any]],
-                            tool_call_id: str,
-                            function_name: str) -> Tuple[List[Dict[str, Any]], Any]:
-        
-        try:
-            if inspect.iscoroutinefunction(tool_function):
-                function_result = await asyncio.wait_for(tool_function(**function_args), timeout=self.tool_timeout)
-            else:
-                function_result = await asyncio.wait_for(asyncio.to_thread(tool_function, **function_args), timeout=self.tool_timeout)
+    async def _send_tool_messages(
+        self,
+        messages: List[Dict[str, Any]],
+        tool_messages: Sequence[Dict[str, Any]],
+        tools: Optional[List[Dict[str, Any]]],
+    ) -> ChatCompletion:
+        messages.extend(tool_messages)
+        return await self.client.chat.completions.create(
+            model=self.model,
+            messages=messages,
+            tools=tools,
+            temperature=self.temperature,
+            max_tokens=self.max_tokens,
+        )
 
-            messages.append({
-                "role": "tool",
-                "tool_call_id": tool_call_id,
-                "name": function_name,
-                "content": json.dumps({"result": function_result})
-            })
-            return messages, function_result
-        
-        except asyncio.TimeoutError:
-            error_message = f"Tool execution timed out after {self.tool_timeout} seconds."
-            logger.warning(f"ToolExecutionError in '{function_name}': {error_message}")
-            messages.append({
-                "role": "tool",
-                "tool_call_id": tool_call_id,
-                "name": function_name,
-                "content": json.dumps({"error": error_message})
-            })
-            return messages, None
-        except Exception as e:
-            # Log the full exception and send a generic error to the LLM
-            logger.error(f"Unexpected error executing tool '{function_name}': {e}", exc_info=True)
-            error_message = "An internal error occurred during tool execution."
-            messages.append({
-                "role": "tool",
-                "tool_call_id": tool_call_id,
-                "name": function_name,
-                "content": json.dumps({"error": error_message})
-            })
-            return messages, None
+    @staticmethod
+    def _format_argument_error(tool_name: str, error: Exception) -> str:
+        return f"Failed to decode function arguments: {error}"
