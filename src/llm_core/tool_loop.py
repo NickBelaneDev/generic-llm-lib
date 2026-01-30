@@ -7,7 +7,7 @@ import inspect
 import json
 import logging
 from dataclasses import dataclass
-from typing import Any, Awaitable, Callable, Dict, Optional, Sequence
+from typing import Any, Awaitable, Callable, Dict, Optional, Sequence, Protocol
 
 from .exceptions import ToolExecutionError
 from .registry import ToolRegistry
@@ -33,6 +33,28 @@ class ToolCallResult:
     call_id: Optional[str] = None
 
 
+class ToolAdapter(Protocol):
+    """
+    Protocol for adapting provider-specific tool handling to the generic loop.
+    """
+
+    def get_tool_calls(self, response: Any) -> Sequence[ToolCallRequest]:
+        """Extracts generic tool calls from a provider-specific response."""
+        ...
+
+    def record_assistant_message(self, response: Any) -> None:
+        """Records the assistant's message (including tool calls) to history."""
+        ...
+
+    def build_tool_response_message(self, result: ToolCallResult) -> Any:
+        """Converts a generic tool result into a provider-specific message."""
+        ...
+
+    async def send_tool_responses(self, messages: Sequence[Any]) -> Any:
+        """Sends the tool response messages back to the provider and awaits the next response."""
+        ...
+
+
 class ToolExecutionLoop:
     """Centralized tool execution loop for LLM providers.
 
@@ -45,8 +67,12 @@ class ToolExecutionLoop:
         *,
         registry: Optional[ToolRegistry],
         max_function_loops: int,
-        tool_timeout: float = 60.0,
-        argument_error_formatter: Optional[Callable[[str, Exception], str]] = None,
+        tool_timeout: float = 180.0,
+        argument_error_formatter: Optional[
+            Callable[
+                [str, Exception], str
+            ]
+        ] = None,
     ) -> None:
         """Initialize the tool execution loop.
 
@@ -66,19 +92,13 @@ class ToolExecutionLoop:
         self,
         *,
         initial_response: Any,
-        get_tool_calls: Callable[[Any], Sequence[ToolCallRequest]],
-        record_assistant_message: Callable[[Any], None],
-        build_tool_response_message: Callable[[ToolCallResult], Any],
-        send_tool_responses: Callable[[Sequence[Any]], Awaitable[Any]],
+        adapter: ToolAdapter,
     ) -> Any:
         """Run the tool execution loop.
 
         Args:
             initial_response: Initial provider response to inspect.
-            get_tool_calls: Extracts tool calls from a provider response.
-            record_assistant_message: Persists the assistant response in provider history.
-            build_tool_response_message: Builds a provider message from tool results.
-            send_tool_responses: Sends tool results back to the provider to get a new response.
+            adapter: The provider-specific adapter for tool handling.
 
         Returns:
             The final provider response after tool execution completes.
@@ -87,21 +107,21 @@ class ToolExecutionLoop:
         current_response = initial_response
 
         for _ in range(self._max_function_loops):
-            tool_calls = list(get_tool_calls(current_response))
+            tool_calls = list(adapter.get_tool_calls(current_response))
 
             if not tool_calls:
-                record_assistant_message(current_response)
+                adapter.record_assistant_message(current_response)
                 return current_response
 
-            record_assistant_message(current_response)
+            adapter.record_assistant_message(current_response)
 
             response_messages = []
             for tool_call in tool_calls:
                 result = await self._handle_tool_call(tool_call)
-                response_messages.append(build_tool_response_message(result))
+                response_messages.append(adapter.build_tool_response_message(result))
 
             if response_messages:
-                current_response = await send_tool_responses(response_messages)
+                current_response = await adapter.send_tool_responses(response_messages)
             else:
                 return current_response
 

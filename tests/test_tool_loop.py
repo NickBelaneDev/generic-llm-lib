@@ -1,14 +1,35 @@
 import pytest
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 from pydantic import BaseModel
+from typing import Sequence, Any
 
-from llm_core.tool_loop import ToolExecutionLoop, ToolCallRequest, ToolCallResult
-from llm_impl.open_api.registry import OpenAIToolRegistry
+from llm_core.tool_loop import ToolExecutionLoop, ToolCallRequest, ToolCallResult, ToolAdapter
+from llm_impl.openai_api.registry import OpenAIToolRegistry
 from llm_core.types import ToolDefinition
 
 
 class SampleArgs(BaseModel):
     required_value: int
+
+
+class MockAdapter(ToolAdapter):
+    def __init__(self, get_tool_calls_func, record_func, build_func, send_func):
+        self.get_tool_calls_func = get_tool_calls_func
+        self.record_func = record_func
+        self.build_func = build_func
+        self.send_func = send_func
+
+    def get_tool_calls(self, response: Any) -> Sequence[ToolCallRequest]:
+        return self.get_tool_calls_func(response)
+
+    def record_assistant_message(self, response: Any) -> None:
+        self.record_func(response)
+
+    def build_tool_response_message(self, result: ToolCallResult) -> Any:
+        return self.build_func(result)
+
+    async def send_tool_responses(self, messages: Sequence[Any]) -> Any:
+        return await self.send_func(messages)
 
 
 @pytest.mark.asyncio
@@ -44,12 +65,16 @@ async def test_tool_execution_loop_runs_tools():
     async def send_tool_responses(tool_messages):
         return final_response
 
+    adapter = MockAdapter(
+        get_tool_calls,
+        record_assistant_message,
+        build_tool_response_message,
+        send_tool_responses
+    )
+
     response = await loop.run(
         initial_response=initial_response,
-        get_tool_calls=get_tool_calls,
-        record_assistant_message=record_assistant_message,
-        build_tool_response_message=build_tool_response_message,
-        send_tool_responses=send_tool_responses,
+        adapter=adapter
     )
 
     tool_func.assert_called_once_with(a=1)
@@ -94,12 +119,16 @@ async def test_tool_execution_loop_handles_invalid_arguments():
     async def send_tool_responses(tool_messages):
         return {"tool_calls": []}
 
+    adapter = MockAdapter(
+        get_tool_calls,
+        record_assistant_message,
+        build_tool_response_message,
+        send_tool_responses
+    )
+
     await loop.run(
         initial_response=initial_response,
-        get_tool_calls=get_tool_calls,
-        record_assistant_message=record_assistant_message,
-        build_tool_response_message=build_tool_response_message,
-        send_tool_responses=send_tool_responses,
+        adapter=adapter
     )
 
     assert tool_results

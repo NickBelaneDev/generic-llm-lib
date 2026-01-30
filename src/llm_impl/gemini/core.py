@@ -3,8 +3,40 @@ from google.genai import types
 from typing import List, Tuple, Optional, Any, Sequence
 from google.genai.types import GenerateContentResponse
 from llm_core import GenericLLM, ToolRegistry
-from llm_core.tool_loop import ToolExecutionLoop, ToolCallRequest, ToolCallResult
+from llm_core.tool_loop import ToolExecutionLoop, ToolCallRequest, ToolCallResult, ToolAdapter
 from .models import GeminiMessageResponse, GeminiChatResponse, GeminiTokens
+
+class GeminiToolAdapter(ToolAdapter):
+    """Adapter for Gemini tool handling."""
+
+    def __init__(self, chat_session: Any):
+        self.chat_session = chat_session
+
+    def get_tool_calls(self, response: GenerateContentResponse) -> Sequence[ToolCallRequest]:
+        function_calls = [p.function_call for p in (response.parts or []) if p.function_call]
+        return [
+            ToolCallRequest(
+                name=function_call.name,
+                arguments=getattr(function_call, "args", None),
+            )
+            for function_call in function_calls
+        ]
+
+    def record_assistant_message(self, response: GenerateContentResponse) -> None:
+        # Gemini handles history internally in the chat session, so we don't need to manually append.
+        pass
+
+    def build_tool_response_message(self, result: ToolCallResult) -> types.Part:
+        return types.Part(
+            function_response=types.FunctionResponse(
+                name=result.name,
+                response=result.response,
+            )
+        )
+
+    async def send_tool_responses(self, messages: Sequence[types.Part]) -> GenerateContentResponse:
+        return self.chat_session.send_message(list(messages))
+
 
 class GenericGemini(GenericLLM):
     """
@@ -20,7 +52,7 @@ class GenericGemini(GenericLLM):
                  temp: float = 1.0,
                  max_tokens: int = 100,
                  max_function_loops: int = 5,
-                 tool_timeout: float = 60.0
+                 tool_timeout: float = 180.0
                  ):
         """
         Initializes the GenericGemini LLM wrapper.
@@ -142,39 +174,13 @@ class GenericGemini(GenericLLM):
         if not response:
             return response, chat
 
+        adapter = GeminiToolAdapter(chat)
         final_response = await self._tool_loop.run(
             initial_response=response,
-            get_tool_calls=self._get_tool_calls,
-            record_assistant_message=lambda _response: None,
-            build_tool_response_message=self._build_tool_response_message,
-            send_tool_responses=lambda parts: self._send_tool_messages(chat, parts),
+            adapter=adapter
         )
 
         return final_response, chat
-
-    @staticmethod
-    def _get_tool_calls(response: GenerateContentResponse) -> Sequence[ToolCallRequest]:
-        function_calls = [p.function_call for p in (response.parts or []) if p.function_call]
-        return [
-            ToolCallRequest(
-                name=function_call.name,
-                arguments=getattr(function_call, "args", None),
-            )
-            for function_call in function_calls
-        ]
-
-    @staticmethod
-    def _build_tool_response_message(tool_result: ToolCallResult) -> types.Part:
-        return types.Part(
-            function_response=types.FunctionResponse(
-                name=tool_result.name,
-                response=tool_result.response,
-            )
-        )
-
-    @staticmethod
-    def _send_tool_messages(chat: Any, parts: Sequence[types.Part]) -> Any:
-        return chat.send_message(list(parts))
 
     def _clean_history(self, history: List[types.Content]) -> List[types.Content]:
         """

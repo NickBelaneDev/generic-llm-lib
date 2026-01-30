@@ -1,12 +1,67 @@
 from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletion
-from typing import List, Tuple, Optional, Any, Dict
+from typing import List, Tuple, Optional, Any, Dict, Sequence
 import logging
+import json
 from llm_core import GenericLLM, ToolRegistry
+from llm_core.tool_loop import ToolExecutionLoop, ToolCallRequest, ToolCallResult, ToolAdapter
 from .models import OpenAIMessageResponse, OpenAIChatResponse, OpenAITokens
-from .tool_helper import ToolHelper
 
 logger = logging.getLogger(__name__)
+
+class OpenAIToolAdapter(ToolAdapter):
+    """Adapter for OpenAI tool handling."""
+
+    def __init__(self, 
+                 client: AsyncOpenAI, 
+                 model: str, 
+                 messages: List[Dict[str, Any]], 
+                 tools: Optional[List[Dict[str, Any]]],
+                 temperature: float,
+                 max_tokens: int):
+        self.client = client
+        self.model = model
+        self.messages = messages
+        self.tools = tools
+        self.temperature = temperature
+        self.max_tokens = max_tokens
+
+    def get_tool_calls(self, response: ChatCompletion) -> Sequence[ToolCallRequest]:
+        if not response.choices:
+            return []
+        tool_calls = response.choices[0].message.tool_calls
+        if not tool_calls:
+            return []
+        return [
+            ToolCallRequest(
+                name=tool_call.function.name,
+                arguments=tool_call.function.arguments,
+                call_id=tool_call.id,
+            )
+            for tool_call in tool_calls
+        ]
+
+    def record_assistant_message(self, response: ChatCompletion) -> None:
+        self.messages.append(response.choices[0].message.model_dump())
+
+    def build_tool_response_message(self, result: ToolCallResult) -> Dict[str, Any]:
+        return {
+            "role": "tool",
+            "tool_call_id": result.call_id,
+            "name": result.name,
+            "content": json.dumps(result.response),
+        }
+
+    async def send_tool_responses(self, tool_messages: Sequence[Dict[str, Any]]) -> ChatCompletion:
+        self.messages.extend(tool_messages)
+        return await self.client.chat.completions.create(
+            model=self.model,
+            messages=self.messages,
+            tools=self.tools,
+            temperature=self.temperature,
+            max_tokens=self.max_tokens,
+        )
+
 
 class GenericOpenAI(GenericLLM):
     """
@@ -47,14 +102,11 @@ class GenericOpenAI(GenericLLM):
 
         self.client: AsyncOpenAI = client
         
-        self.tool_helper = ToolHelper(
-            client=self.client,
-            model=self.model,
-            registry=self.registry,
-            temperature=self.temperature,
-            max_tokens=self.max_tokens,
-            max_function_loops=self.max_function_loops,
-            tool_timeout=self.tool_timeout
+        self._tool_loop = ToolExecutionLoop(
+            registry=registry,
+            max_function_loops=max_function_loops,
+            tool_timeout=tool_timeout,
+            argument_error_formatter=self._format_argument_error,
         )
 
     async def ask(self, prompt: str, model: str = None) -> OpenAIMessageResponse:
@@ -143,17 +195,34 @@ class GenericOpenAI(GenericLLM):
                                      tools: Optional[List[Dict[str, Any]]]) -> Tuple[List[Dict[str, Any]], ChatCompletion]:
         """
         Handles the function calling loop.
-        Delegates to ToolHelper.
+        Delegates to ToolExecutionLoop via OpenAIToolAdapter.
 
         Args:
             messages: The current list of messages in the conversation.
             initial_response: The initial response object from the model.
-            tools: The list of available tools (unused here as ToolHelper has access to registry).
+            tools: The list of available tools.
 
         Returns:
             Tuple[List[Dict[str, Any]], ChatCompletion]: The updated messages list and the final response object from the model.
         """
-        return await self.tool_helper.handle_function_calls(messages, initial_response)
+        if not initial_response.choices:
+            return messages, initial_response
+
+        adapter = OpenAIToolAdapter(
+            client=self.client,
+            model=self.model,
+            messages=messages,
+            tools=tools,
+            temperature=self.temperature,
+            max_tokens=self.max_tokens
+        )
+
+        final_response = await self._tool_loop.run(
+            initial_response=initial_response,
+            adapter=adapter
+        )
+
+        return messages, final_response
 
     @staticmethod
     def _clean_history(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -225,3 +294,7 @@ class GenericOpenAI(GenericLLM):
         )
     
         return openai_response
+
+    @staticmethod
+    def _format_argument_error(tool_name: str, error: Exception) -> str:
+        return f"Failed to decode function arguments: {error}"

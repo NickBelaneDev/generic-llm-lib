@@ -1,7 +1,7 @@
 from .gemini.core import GenericGemini
 from .gemini.registry import GeminiToolRegistry
 from .gemini.models import GeminiMessageResponse, GeminiChatResponse, GeminiTokens
-from .open_api import GenericOpenAI, OpenAIToolRegistry, OpenAIMessageResponse, OpenAITokens, OpenAIChatResponse
+from .openai_api import GenericOpenAI, OpenAIToolRegistry, OpenAIMessageResponse, OpenAITokens, OpenAIChatResponse
 
 
 __all__ = [

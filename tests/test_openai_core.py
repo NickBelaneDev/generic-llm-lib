@@ -4,9 +4,9 @@ from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletion, ChatCompletionMessage, ChatCompletionMessageToolCall
 from openai.types.chat.chat_completion import Choice
 from openai.types.completion_usage import CompletionUsage
-from llm_impl.open_api.core import GenericOpenAI
-from llm_impl.open_api.models import OpenAIChatResponse, OpenAIMessageResponse
-from llm_impl.open_api.registry import OpenAIToolRegistry
+from llm_impl.openai_api.core import GenericOpenAI
+from llm_impl.openai_api.models import OpenAIChatResponse, OpenAIMessageResponse
+from llm_impl.openai_api.registry import OpenAIToolRegistry
 import json
 
 @pytest.fixture
