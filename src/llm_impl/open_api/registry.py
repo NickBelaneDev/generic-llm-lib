@@ -1,16 +1,5 @@
-import inspect
 from llm_core import ToolRegistry, ToolDefinition
-from llm_core.exceptions import ToolRegistrationError
 from typing import Callable, Dict, Any, Union, Optional, List
-
-TYPE_MAPPING = {
-    str: "string",
-    int: "integer",
-    float: "number",
-    bool: "boolean",
-    list: "array",
-    dict: "object"
-}
 
 class OpenAIToolRegistry(ToolRegistry):
     """

@@ -1,18 +1,6 @@
-import inspect
-
 from google.genai import types
 from llm_core import ToolRegistry, ToolDefinition
-from llm_core.exceptions import ToolRegistrationError
 from typing import Callable, Dict, Any, Union, Optional
-
-TYPE_MAPPING = {
-    str: "STRING",
-    int: "INTEGER",
-    float: "NUMBER",
-    bool: "BOOLEAN",
-    list: "ARRAY",
-    dict: "OBJECT"
-}
 
 class GeminiToolRegistry(ToolRegistry):
     """

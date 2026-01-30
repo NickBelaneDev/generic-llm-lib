@@ -15,7 +15,8 @@ classifiers = [
 ]
 dependencies = [
     "google-genai",
-    "openai"
+    "openai",
+    "pydantic>=2.0"
 ]
 
 [project.urls]
