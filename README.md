@@ -61,3 +61,24 @@ async def main():
 if __name__ == "__main__":
     asyncio.run(main())
 ```
+
+## Architecture & Tool Execution Logic
+
+The library uses a centralized `ToolExecutionLoop` to handle the interaction between the LLM and the registered tools. This ensures consistent behavior across different providers (Gemini, OpenAI) and simplifies the implementation of new providers.
+
+### How it works
+
+1.  **Initial Request**: The user sends a message to the LLM via the `chat` method.
+2.  **Model Response**: The LLM processes the message and may decide to call one or more tools. It returns a response containing "tool calls".
+3.  **Tool Execution Loop**:
+    *   The `ToolExecutionLoop` inspects the response.
+    *   If tool calls are present, it iterates through them.
+    *   **Validation**: It validates the tool name against the registry and parses/validates the arguments using the tool's Pydantic model (if available).
+    *   **Execution**: It executes the corresponding Python function.
+        *   **Async Support**: Async functions are awaited directly.
+        *   **Sync Support**: Synchronous functions are run in a separate thread (`asyncio.to_thread`) to prevent blocking the event loop.
+    *   **Error Handling**: Errors during validation or execution are caught and formatted as error messages to be sent back to the LLM, allowing the model to self-correct.
+4.  **Feedback Loop**: The results (or errors) of the tool executions are sent back to the LLM.
+5.  **Final Response**: The LLM processes the tool results and generates a final natural language response, which is returned to the user.
+
+This loop continues until the model stops requesting tool calls or the `max_function_loops` limit is reached.

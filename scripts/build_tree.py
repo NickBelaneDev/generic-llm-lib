@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 import pprint
 CS_LAB_ROOT = Path("C:/Users/Anwender/PycharmProjects/cs-lab")
-COMPUTER_SCIENCE_FOLDER = Path("C:/Users/Anwender/PycharmProjects/generic-llm-lib/src")
+COMPUTER_SCIENCE_FOLDER = Path("/")
 
 with open('C:/Users/Anwender/PycharmProjects/cs-lab/tree.json', 'r') as f:
     tree_tmplt: dict = json.load(f)
