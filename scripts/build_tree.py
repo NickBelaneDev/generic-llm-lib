@@ -1,13 +1,7 @@
 import json
 from pathlib import Path
 import pprint
-CS_LAB_ROOT = Path("C:/Users/Anwender/PycharmProjects/cs-lab")
-COMPUTER_SCIENCE_FOLDER = Path("/")
-
-with open('C:/Users/Anwender/PycharmProjects/cs-lab/tree.json', 'r') as f:
-    tree_tmplt: dict = json.load(f)
-
-
+LIBRARY_ROOT = Path(__file__).parent
 
 class DirectoryScanner:
     def __init__(self):
@@ -16,7 +10,7 @@ class DirectoryScanner:
 
     def read_directory_tree(
             self,
-            path: Path = COMPUTER_SCIENCE_FOLDER
+            path: Path = LIBRARY_ROOT
     ) \
             -> dict:
         """Walks from a certain directory and creates a dict from its structure."""
@@ -53,7 +47,7 @@ class DirectoryScanner:
     def build_directory_tree(
             self,
             data: dict,
-            path: Path = COMPUTER_SCIENCE_FOLDER
+            path: Path = LIBRARY_ROOT
     )\
             -> None:
         """Creates a Directory from a Dictionary."""
@@ -77,10 +71,8 @@ class DirectoryScanner:
             except FileExistsError:
                 print(f"File already exists at {_next_path}")
 
-    #build_directory_tree(tree_tmplt)
-ds = DirectoryScanner()
-dict_tree = ds.read_directory_tree()
 
-str_tree = ds.json_tree_to_string(dict_tree)
-pprint.pprint(dict_tree)
-print(str_tree)
+
+if __name__ == "__main__":
+    ds = DirectoryScanner()
+    dict_tree = ds.read_directory_tree()
