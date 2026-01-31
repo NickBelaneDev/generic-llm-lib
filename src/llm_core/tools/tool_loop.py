@@ -6,53 +6,14 @@ import asyncio
 import inspect
 import json
 import logging
-from dataclasses import dataclass
-from typing import Any, Awaitable, Callable, Dict, Optional, Sequence, Protocol
+from typing import Any, Callable, Dict, Optional
 
-from .exceptions import ToolExecutionError
+from llm_core.exceptions.exceptions import ToolExecutionError
+from .adapter import ToolAdapter
+from .call_protocol import ToolCallRequest, ToolCallResult
 from .registry import ToolRegistry
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass(frozen=True)
-class ToolCallRequest:
-    """Represents a normalized tool call request from an LLM response."""
-
-    name: str
-    arguments: Any
-    call_id: Optional[str] = None
-
-
-@dataclass(frozen=True)
-class ToolCallResult:
-    """Represents the outcome of executing a tool call."""
-
-    name: str
-    response: Dict[str, Any]
-    call_id: Optional[str] = None
-
-
-class ToolAdapter(Protocol):
-    """
-    Protocol for adapting provider-specific tool handling to the generic loop.
-    """
-
-    def get_tool_calls(self, response: Any) -> Sequence[ToolCallRequest]:
-        """Extracts generic tool calls from a provider-specific response."""
-        ...
-
-    def record_assistant_message(self, response: Any) -> None:
-        """Records the assistant's message (including tool calls) to history."""
-        ...
-
-    def build_tool_response_message(self, result: ToolCallResult) -> Any:
-        """Converts a generic tool result into a provider-specific message."""
-        ...
-
-    async def send_tool_responses(self, messages: Sequence[Any]) -> Any:
-        """Sends the tool response messages back to the provider and awaits the next response."""
-        ...
 
 
 class ToolExecutionLoop:
@@ -79,7 +40,7 @@ class ToolExecutionLoop:
         Args:
             registry: Tool registry used to resolve tool definitions.
             max_function_loops: Maximum number of tool-call iterations allowed.
-            tool_timeout: Timeout in seconds for tool execution.
+            tool_timeout: Timeout in seconds for tool execution. Default is 180 seconds.
             argument_error_formatter: Optional formatter for argument parsing errors.
         """
 
@@ -162,6 +123,7 @@ class ToolExecutionLoop:
                     call_id=tool_call.call_id,
                 )
 
+        # Execute the tool function
         try:
             function_result = await self._execute_tool(tool_def.func, function_args)
         except ToolExecutionError as exc:
@@ -179,7 +141,7 @@ class ToolExecutionLoop:
                 exc,
                 exc_info=True,
             )
-            msg = "An internal error occurred during tool execution."
+            msg = f"Unexpected error executing tool '{tool_call.name}': {exc}"
             return ToolCallResult(
                 name=tool_call.name,
                 response={"error": msg},
@@ -205,7 +167,6 @@ class ToolExecutionLoop:
 
             except json.JSONDecodeError as exc:
                 raise ToolExecutionError(self._argument_error_formatter(tool_name, exc)) from exc
-
 
             if parsed is None:
                 return {}

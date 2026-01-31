@@ -1,11 +1,11 @@
 import pytest
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 from pydantic import BaseModel
 from typing import Sequence, Any
 
-from llm_core.tool_loop import ToolExecutionLoop, ToolCallRequest, ToolCallResult, ToolAdapter
+from llm_core.tools import ToolExecutionLoop, ToolCallRequest, ToolCallResult, ToolAdapter
 from llm_impl.openai_api.registry import OpenAIToolRegistry
-from llm_core.types import ToolDefinition
+from llm_core.tools.models import ToolDefinition
 
 
 class SampleArgs(BaseModel):
@@ -79,7 +79,7 @@ async def test_tool_execution_loop_runs_tools():
 
     tool_func.assert_called_once_with(a=1)
     assert response == final_response
-    assert recorded == [initial_response]
+    assert recorded == [initial_response, final_response]
     assert captured_tool_results[0].response == {"result": "ok"}
 
 

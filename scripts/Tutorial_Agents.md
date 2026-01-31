@@ -42,18 +42,19 @@ def get_weather(
 Use `ToolRegistry` to manage your tools.
 
 ```python
-from llm_core.registry import ToolRegistry
+from llm_core.tools.registry import ToolRegistry
 
 registry = ToolRegistry()
 
 # Register a function directly
 registry.register(get_weather)
 
+
 # Or use the decorator
 @registry.tool
 def calculate_sum(
-    a: Annotated[int, Field(description="First number")], 
-    b: Annotated[int, Field(description="Second number")]
+        a: Annotated[int, Field(description="First number")],
+        b: Annotated[int, Field(description="Second number")]
 ) -> int:
     """Adds two numbers."""
     return a + b

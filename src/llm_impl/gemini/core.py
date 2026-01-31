@@ -3,7 +3,7 @@ from google.genai import types
 from typing import List, Tuple, Optional, Any, Sequence
 from google.genai.types import GenerateContentResponse
 from llm_core import GenericLLM, ToolRegistry
-from llm_core.tool_loop import ToolExecutionLoop, ToolCallRequest, ToolCallResult, ToolAdapter
+from llm_core.tools import ToolExecutionLoop, ToolCallRequest, ToolCallResult, ToolAdapter
 from .models import GeminiMessageResponse, GeminiChatResponse, GeminiTokens
 
 class GeminiToolAdapter(ToolAdapter):
@@ -182,7 +182,8 @@ class GenericGemini(GenericLLM):
 
         return final_response, chat
 
-    def _clean_history(self, history: List[types.Content]) -> List[types.Content]:
+    @staticmethod
+    def _clean_history(history: List[types.Content]) -> List[types.Content]:
         """
         Removes intermediate tool calls and outputs from the history to save tokens.
         Keeps user messages, system instructions, and assistant messages that have content.

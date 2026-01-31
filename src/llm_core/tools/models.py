@@ -1,6 +1,5 @@
 from typing import Optional, Any, Callable, Type
-from pydantic import BaseModel, Field
-
+from pydantic import BaseModel
 # Placeholder for future generic types to decouple from provider specific types
 # e.g. GenericMessage, GenericRole, etc.
 
@@ -23,18 +22,3 @@ class ToolDefinition(BaseModel):
     parameters: Optional[Any] = None
     args_model: Optional[Type[BaseModel]] = None
 
-
-class LLMConfig(BaseModel):
-    """
-    Configuration parameters for an LLM.
-
-    Attributes:
-        temperature: Controls the randomness of the output. Higher values mean more random.
-                     Must be between 0 and 2, inclusive.
-        max_tokens: The maximum number of tokens to generate in the LLM's response.
-                    Must be at least 10.
-        system_instruction: An optional system-level instruction or persona for the LLM.
-    """
-    temperature: float = Field(default=0.7, ge=0, le=2)
-    max_tokens: int = Field(default=1024, ge=10)
-    system_instruction: Optional[str] = None

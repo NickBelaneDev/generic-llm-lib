@@ -6,8 +6,8 @@ from pydantic import BaseModel
 from pydantic.fields import FieldInfo
 from pydantic import create_model  # NOTE: For context: it was pydantic.v1 before.
 
-from .types import ToolDefinition
-from .exceptions import ToolRegistrationError, ToolValidationError
+from llm_core.tools.models import ToolDefinition
+from llm_core.exceptions.exceptions import ToolRegistrationError, ToolValidationError
 import inspect
 
 class ToolRegistry(ABC):

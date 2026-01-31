@@ -1,8 +1,8 @@
 import pytest
-from typing import Annotated, List, Dict
+from typing import Annotated, List
 from pydantic import Field, BaseModel
-from llm_core.registry import ToolRegistry
-from llm_core.exceptions import ToolValidationError
+from llm_core.tools.registry import ToolRegistry
+from llm_core.exceptions.exceptions import ToolValidationError
 from llm_impl.gemini.registry import GeminiToolRegistry
 from llm_impl.openai_api.registry import OpenAIToolRegistry
 from google.genai import types
