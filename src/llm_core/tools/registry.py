@@ -1,10 +1,9 @@
-import copy
 from abc import abstractmethod, ABC
 from typing import Callable, Dict, Any, Union, Optional, get_origin, Annotated, get_args
 
-from pydantic import BaseModel
+import jsonref
 from pydantic.fields import FieldInfo
-from pydantic import create_model  # NOTE: For context: it was pydantic.v1 before.
+from pydantic import create_model
 
 from llm_core.tools.models import ToolDefinition
 from llm_core.exceptions.exceptions import ToolRegistrationError, ToolValidationError
@@ -107,19 +106,26 @@ class ToolRegistry(ABC):
             pydantic_default = default if default != inspect.Parameter.empty else ...
             fields[param_name] = (annotation, pydantic_default)
 
-        DynamicParamsModel: BaseModel = create_model(f"{tool_name}Params", **fields)
+        dynamic_params_model = create_model(f"{tool_name}Params", **fields)
 
-        raw_schema = DynamicParamsModel.model_json_schema()
-        parameters_schema = self._resolve_schema_refs(raw_schema)
-
-        parameters_schema.pop("title", None)
+        raw_schema = dynamic_params_model.model_json_schema()
+        
+        # 1. Check for recursion
+        self._assert_no_recursive_refs(raw_schema)
+        
+        # 2. Resolve refs using jsonref
+        # proxies=False ensures we get a plain dict back, not JsonRef objects
+        parameters_schema = jsonref.replace_refs(raw_schema, proxies=False)
+        
+        # 3. Sanitize schema (remove $defs, title, etc.)
+        parameters_schema = self._sanitize_schema(parameters_schema)
 
         return ToolDefinition(
             name=tool_name, 
             description=description, 
             func=func, 
             parameters=parameters_schema,
-            args_model=DynamicParamsModel
+            args_model=dynamic_params_model
         )
 
 
@@ -142,43 +148,90 @@ class ToolRegistry(ABC):
         return {name: tool.func for name, tool in self.tools.items()}
 
 
-    def _resolve_schema_refs(
-            self,
-            schema: dict,
-            defs: dict = None,
-            depth: int = 0,
-            max_depth: int = 20
-    ) -> dict:
-        if depth > max_depth:
-            raise RecursionError(f"Max recursion depth ({max_depth}) reached while resolving schema references.")
+    @staticmethod
+    def _assert_no_recursive_refs(schema: dict):
+        """
+        Checks if the schema contains recursive references by traversing the graph.
+        Raises ToolValidationError if a cycle is detected.
+        """
+        defs = schema.get("$defs", {}) or schema.get("definitions", {})
+        
+        def check(node, path):
+            if isinstance(node, dict):
+                if "$ref" in node:
+                    ref = node["$ref"]
+                    if ref in path:
+                        raise ToolValidationError(
+                            f"Recursive structure detected: {ref}. "
+                            "Recursive structures are not allowed in tool inputs. "
+                            "Use parent_id, lists, or a workflow loop instead."
+                        )
+                    
+                    # If it's a local ref, follow it
+                    if ref.startswith("#"):
+                        # Extract definition name
+                        # e.g. #/$defs/MyModel
+                        parts = ref.split("/")
+                        if len(parts) >= 3:
+                            def_name = parts[-1]
+                            if def_name in defs:
+                                check(defs[def_name], path | {ref})
+                    return
 
-        schema = copy.deepcopy(schema)
+                for v in node.values():
+                    check(v, path)
+            elif isinstance(node, list):
+                for item in node:
+                    check(item, path)
 
-        if defs is None:
-            defs = schema.pop("$defs", {})
+        check(schema, set())
 
-        if "$ref" in schema:
-            ref_key = schema["$ref"].split("/")[-1]
-            if ref_key in defs:
-                ref_content = defs[ref_key]
-                resolved_content = self._resolve_schema_refs(ref_content, defs, depth + 1, max_depth)
-
-                for k, v in resolved_content.items():
-                    if k not in schema or k == "$ref":
-                        schema[k] = v
-
-                del schema["$ref"]
-                return schema
-
-        if "properties" in schema:
-            for prop_name, prop_schema in schema["properties"].items():
-                schema["properties"][prop_name] = self._resolve_schema_refs(prop_schema, defs, depth + 1, max_depth)
-
-        if "items" in schema:
-            schema["items"] = self._resolve_schema_refs(schema["items"], defs, depth + 1, max_depth)
-
-        for key in ["anyOf", "allOf", "oneOf"]:
-            if key in schema:
-                schema[key] = [self._resolve_schema_refs(item, defs, depth + 1, max_depth) for item in schema[key]]
-
-        return schema
+    def _sanitize_schema(self, schema: dict) -> dict:
+        """
+        Cleans up the schema for better compatibility with LLM providers.
+        Removes $defs, $schema, $id, title.
+        Simplifies Optional fields (anyOf with null).
+        Enforces additionalProperties: false for objects.
+        """
+        if not isinstance(schema, dict):
+            return schema
+            
+        new_schema = schema.copy()
+        
+        # 1. Remove metadata keys
+        for key in ["$defs", "$schema", "$id", "title", "definitions"]:
+            new_schema.pop(key, None)
+            
+        # 2. Handle anyOf with null (Optional fields)
+        if "anyOf" in new_schema:
+            any_of = new_schema["anyOf"]
+            # Check if it's a simple Optional (one type + null)
+            non_null = [x for x in any_of if x.get("type") != "null"]
+            
+            if len(non_null) == 1:
+                # Simplify to the single type
+                simplified = non_null[0]
+                
+                if isinstance(simplified, dict):
+                    # Merge simplified into new_schema
+                    # We prefer the description from the parent (new_schema) if present
+                    merged = simplified.copy()
+                    if "description" in new_schema:
+                        merged["description"] = new_schema["description"]
+                    
+                    # Recurse on the merged result
+                    return self._sanitize_schema(merged)
+        
+        # 3. Enforce additionalProperties: false for objects
+        if new_schema.get("type") == "object":
+            if "additionalProperties" not in new_schema:
+                new_schema["additionalProperties"] = False
+                
+        # Recurse on children
+        for key, value in new_schema.items():
+            if isinstance(value, dict):
+                new_schema[key] = self._sanitize_schema(value)
+            elif isinstance(value, list):
+                new_schema[key] = [self._sanitize_schema(item) if isinstance(item, dict) else item for item in value]
+                
+        return new_schema
