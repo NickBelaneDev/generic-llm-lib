@@ -64,7 +64,13 @@ class ToolRegistry(ABC):
 
         self.tools[tool.name] = tool
 
-    def _generate_tool_definition(self, func: Callable, name: Optional[str] = None, description: Optional[str] = None) -> ToolDefinition:
+
+    def _generate_tool_definition(
+            self, func: Callable,
+            name: Optional[str] = None,
+            description: Optional[str] = None
+    ) -> ToolDefinition:
+
         tool_name = name or func.__name__
 
         if description is None:
@@ -116,10 +122,12 @@ class ToolRegistry(ABC):
             args_model=DynamicParamsModel
         )
 
+
     def tool(self, func: Callable) -> Callable:
         """A decorator to turn a function into an LLM tool."""
         self.register(func)
         return func
+
 
     @property
     @abstractmethod
@@ -127,12 +135,20 @@ class ToolRegistry(ABC):
         """Constructs the final Tool object specific to the LLM provider."""
         pass
 
+
     @property
     def implementations(self) -> Dict[str, Callable]:
         """Returns a dictionary mapping function names to their callables."""
         return {name: tool.func for name, tool in self.tools.items()}
 
-    def _resolve_schema_refs(self, schema: dict, defs: dict = None, depth: int = 0, max_depth: int = 20) -> dict:
+
+    def _resolve_schema_refs(
+            self,
+            schema: dict,
+            defs: dict = None,
+            depth: int = 0,
+            max_depth: int = 20
+    ) -> dict:
         if depth > max_depth:
             raise RecursionError(f"Max recursion depth ({max_depth}) reached while resolving schema references.")
 

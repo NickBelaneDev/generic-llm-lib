@@ -115,9 +115,12 @@ class GenericGemini(GenericLLM):
 
         return response.last_response
 
-    async def chat(self,
-                   history: List[types.Content],
-                   user_prompt: str) -> GeminiChatResponse:
+    async def chat(
+            self,
+            history: List[types.Content],
+            user_prompt: str,
+            clean_history: bool = False) \
+            -> GeminiChatResponse:
         """
         Processes a single turn of a chat conversation, including handling user input,
         generating LLM responses, and executing any requested function calls.
@@ -128,6 +131,7 @@ class GenericGemini(GenericLLM):
         Args:
             history: A list of `types.Content` objects representing the conversation history.
             user_prompt: The current message from the user.
+            clean_history: Decide if the history may contain complete function_call parts or not.
 
         Returns:
             GeminiChatResponse: An object containing:
@@ -149,12 +153,15 @@ class GenericGemini(GenericLLM):
         # Get full history
         full_history = chat.get_history()
         
+
         # Clean history to remove intermediate tool calls and outputs to save tokens
-        cleaned_history = self._clean_history(full_history)
-        
-        gemini_response = self._build_response(response, cleaned_history)
-        
-        return gemini_response
+        if clean_history:
+            cleaned_history = self._clean_history(full_history)
+            return self._build_response(response, cleaned_history)
+
+        else:
+            return self._build_response(response, full_history)
+
     
     async def _handle_function_calls(self, response: GenerateContentResponse, chat) -> Tuple[GenerateContentResponse, Any]:
         """

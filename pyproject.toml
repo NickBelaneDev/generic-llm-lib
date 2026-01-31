@@ -15,8 +15,9 @@ classifiers = [
 ]
 dependencies = [
     "google-genai",
+    "jsonref>=1.1.0",
     "openai",
-    "pydantic>=2.0"
+    "pydantic>=2.0",
 ]
 
 [project.urls]

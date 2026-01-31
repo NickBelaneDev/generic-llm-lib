@@ -77,8 +77,9 @@ class ToolExecutionLoop:
             adapter.record_assistant_message(current_response)
 
             response_messages = []
-            for tool_call in tool_calls:
-                result = await self._handle_tool_call(tool_call)
+            tasks = [self._handle_tool_call(tc) for tc in tool_calls]
+            results = await asyncio.gather(*tasks)
+            for result in results:
                 response_messages.append(adapter.build_tool_response_message(result))
 
             if response_messages:
