@@ -7,7 +7,11 @@ from pydantic import create_model
 
 from llm_core.tools.models import ToolDefinition
 from llm_core.exceptions.exceptions import ToolRegistrationError, ToolValidationError
+from llm_core.tools.schema_validator import SchemaValidator
+from llm_core.logger import get_logger
 import inspect
+
+logger = get_logger(__name__)
 
 class ToolRegistry(ABC):
     """
@@ -59,13 +63,16 @@ class ToolRegistry(ABC):
                 tool = ToolDefinition(name=name_or_tool, description=description, func=func, parameters=parameters)
 
         if tool.name in self.tools:
-             raise ToolRegistrationError(f"Tool '{tool.name}' is already registered.")
+             msg = f"Tool '{tool.name}' is already registered."
+             logger.error(msg)
+             raise ToolRegistrationError(msg)
 
         self.tools[tool.name] = tool
+        logger.info(f"Successfully registered tool: '{tool.name}'")
 
-
+    @staticmethod
     def _generate_tool_definition(
-            self, func: Callable,
+            func: Callable,
             name: Optional[str] = None,
             description: Optional[str] = None
     ) -> ToolDefinition:
@@ -75,7 +82,9 @@ class ToolRegistry(ABC):
         if description is None:
             doc = inspect.getdoc(func)
             if not doc:
-                raise ToolValidationError(f"Tool '{tool_name}' missing docstring. LLMs need a description of what the tool does.")
+                msg = f"Tool '{tool_name}' missing docstring. LLMs need a description of what the tool does."
+                logger.error(msg)
+                raise ToolValidationError(msg)
             description = doc
 
         signature = inspect.signature(func)
@@ -98,10 +107,12 @@ class ToolRegistry(ABC):
                         break
 
             if not has_description:
-                raise ToolValidationError(
+                msg = (
                     f"Parameter '{param_name}' in tool '{tool_name}' is missing a description.\n"
                     f"Usage: {param_name}: Annotated[Type, Field(description='...')] = ..."
                 )
+                logger.error(msg)
+                raise ToolValidationError(msg)
 
             pydantic_default = default if default != inspect.Parameter.empty else ...
             fields[param_name] = (annotation, pydantic_default)
@@ -111,14 +122,14 @@ class ToolRegistry(ABC):
         raw_schema = dynamic_params_model.model_json_schema()
         
         # 1. Check for recursion
-        self._assert_no_recursive_refs(raw_schema)
+        SchemaValidator.assert_no_recursive_refs(raw_schema)
         
         # 2. Resolve refs using jsonref
         # proxies=False ensures we get a plain dict back, not JsonRef objects
         parameters_schema = jsonref.replace_refs(raw_schema, proxies=False)
         
         # 3. Sanitize schema (remove $defs, title, etc.)
-        parameters_schema = self._sanitize_schema(parameters_schema)
+        parameters_schema = SchemaValidator.sanitize_schema(parameters_schema)
 
         return ToolDefinition(
             name=tool_name, 
@@ -146,92 +157,3 @@ class ToolRegistry(ABC):
     def implementations(self) -> Dict[str, Callable]:
         """Returns a dictionary mapping function names to their callables."""
         return {name: tool.func for name, tool in self.tools.items()}
-
-
-    @staticmethod
-    def _assert_no_recursive_refs(schema: dict):
-        """
-        Checks if the schema contains recursive references by traversing the graph.
-        Raises ToolValidationError if a cycle is detected.
-        """
-        defs = schema.get("$defs", {}) or schema.get("definitions", {})
-        
-        def check(node, path):
-            if isinstance(node, dict):
-                if "$ref" in node:
-                    ref = node["$ref"]
-                    if ref in path:
-                        raise ToolValidationError(
-                            f"Recursive structure detected: {ref}. "
-                            "Recursive structures are not allowed in tool inputs. "
-                            "Use parent_id, lists, or a workflow loop instead."
-                        )
-                    
-                    # If it's a local ref, follow it
-                    if ref.startswith("#"):
-                        # Extract definition name
-                        # e.g. #/$defs/MyModel
-                        parts = ref.split("/")
-                        if len(parts) >= 3:
-                            def_name = parts[-1]
-                            if def_name in defs:
-                                check(defs[def_name], path | {ref})
-                    return
-
-                for v in node.values():
-                    check(v, path)
-            elif isinstance(node, list):
-                for item in node:
-                    check(item, path)
-
-        check(schema, set())
-
-    def _sanitize_schema(self, schema: dict) -> dict:
-        """
-        Cleans up the schema for better compatibility with LLM providers.
-        Removes $defs, $schema, $id, title.
-        Simplifies Optional fields (anyOf with null).
-        Enforces additionalProperties: false for objects.
-        """
-        if not isinstance(schema, dict):
-            return schema
-            
-        new_schema = schema.copy()
-        
-        # 1. Remove metadata keys
-        for key in ["$defs", "$schema", "$id", "title", "definitions"]:
-            new_schema.pop(key, None)
-            
-        # 2. Handle anyOf with null (Optional fields)
-        if "anyOf" in new_schema:
-            any_of = new_schema["anyOf"]
-            # Check if it's a simple Optional (one type + null)
-            non_null = [x for x in any_of if x.get("type") != "null"]
-            
-            if len(non_null) == 1:
-                # Simplify to the single type
-                simplified = non_null[0]
-                
-                if isinstance(simplified, dict):
-                    # Merge simplified into new_schema
-                    # We prefer the description from the parent (new_schema) if present
-                    merged = simplified.copy()
-                    if "description" in new_schema:
-                        merged["description"] = new_schema["description"]
-                    
-                    # Recurse on the merged result
-                    return self._sanitize_schema(merged)
-        
-        # 3. Enforce additionalProperties: false for objects
-        if new_schema.get("type") == "object":
-            if "additionalProperties" not in new_schema:
-                new_schema["additionalProperties"] = False
-                
-        # Recurse on children
-        for key, value in new_schema.items():
-            if isinstance(value, dict):
-                new_schema[key] = self._sanitize_schema(value)
-            elif isinstance(value, list):
-                new_schema[key] = [self._sanitize_schema(item) if isinstance(item, dict) else item for item in value]
-                
-        return new_schema

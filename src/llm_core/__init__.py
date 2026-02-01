@@ -8,6 +8,7 @@ from .exceptions import (
     ToolValidationError
 )
 from .tools.models import ToolDefinition
+from .logger import get_logger, setup_logging
 
 __all__ = [
     "GenericLLM",
@@ -17,5 +18,7 @@ __all__ = [
     "ToolRegistrationError",
     "ToolNotFoundError",
     "ToolExecutionError",
-    "ToolValidationError"
+    "ToolValidationError",
+    "get_logger",
+    "setup_logging"
 ]

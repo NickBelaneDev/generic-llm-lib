@@ -4,7 +4,10 @@ from typing import List, Tuple, Optional, Any, Sequence
 from google.genai.types import GenerateContentResponse
 from llm_core import GenericLLM, ToolRegistry
 from llm_core.tools import ToolExecutionLoop, ToolCallRequest, ToolCallResult, ToolAdapter
+from llm_core.logger import get_logger
 from .models import GeminiMessageResponse, GeminiChatResponse, GeminiTokens
+
+logger = get_logger(__name__)
 
 class GeminiToolAdapter(ToolAdapter):
     """Adapter for Gemini tool handling."""
@@ -83,6 +86,7 @@ class GenericGemini(GenericLLM):
             tool_obj = self.registry.tool_object
             if tool_obj:
                 tools_config = [tool_obj]
+                logger.info(f"Registered {len(self.registry.tools)} tools for Gemini model '{model_name}'.")
 
         self.config: types.GenerateContentConfig = types.GenerateContentConfig(
             system_instruction=sys_instruction,
@@ -93,6 +97,7 @@ class GenericGemini(GenericLLM):
         )
 
         self.client: genai.Client = client
+        logger.info(f"Initialized GenericGemini with model='{model_name}', temp={temp}, max_tokens={max_tokens}")
 
     async def ask(self, prompt: str, model: str = None) -> GeminiMessageResponse:
         """
@@ -108,6 +113,8 @@ class GenericGemini(GenericLLM):
         """
         if not model:
             model = self.model
+        
+        logger.debug(f"Asking Gemini (model={model}): {prompt[:50]}...")
 
         # We use a temporary chat session to handle the tool execution loop (Model -> Tool -> Model)
         # We start with an empty history.
@@ -139,6 +146,8 @@ class GenericGemini(GenericLLM):
             - The updated conversation history, including the user's prompt, LLM's responses,
               and any tool calls/responses.
         """
+        logger.debug(f"Starting chat turn. History length: {len(history)}. Prompt: {user_prompt[:50]}...")
+
         # Create a chat session with the provided history
         chat = self.client.chats.create(
             model=self.model,
@@ -147,7 +156,12 @@ class GenericGemini(GenericLLM):
         )
         
         # Send the user message
-        _response = chat.send_message(user_prompt)
+        try:
+            _response = chat.send_message(user_prompt)
+        except Exception as e:
+            logger.error(f"Error sending message to Gemini: {e}", exc_info=True)
+            raise
+
         response, chat = await self._handle_function_calls(_response, chat)
         
         # Get full history
@@ -156,6 +170,7 @@ class GenericGemini(GenericLLM):
 
         # Clean history to remove intermediate tool calls and outputs to save tokens
         if clean_history:
+            logger.debug("Cleaning chat history (removing intermediate tool calls).")
             cleaned_history = self._clean_history(full_history)
             return self._build_response(response, cleaned_history)
 
