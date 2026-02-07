@@ -3,9 +3,9 @@ from unittest.mock import AsyncMock
 from pydantic import BaseModel
 from typing import Sequence, Any, Dict, List, Callable, Awaitable, cast
 
-from llm_core.tools import ToolExecutionLoop, ToolCallRequest, ToolCallResult, ToolAdapter
-from llm_impl.openai_api.registry import OpenAIToolRegistry
-from llm_core.tools.models import ToolDefinition
+from generic_llm_lib.llm_core import ToolExecutionLoop, ToolCallRequest, ToolCallResult, ToolAdapter
+from generic_llm_lib.llm_impl.openai_api.registry import OpenAIToolRegistry
+from generic_llm_lib.llm_core import ToolDefinition
 
 
 class SampleArgs(BaseModel):
@@ -92,8 +92,28 @@ async def test_tool_execution_loop_runs_tools() -> None:
     # 2. send_tool_responses -> final_response
     # 3. record(final_response)
     # 4. loop checks final_response for tool calls -> empty -> break
-    # So recorded should be [initial_response, final_response]
-    assert recorded == [initial_response, final_response]
+    # So recorded should be [initial_response] because the loop breaks immediately if no tool calls are found in the new response
+    # and it does NOT record the final response inside the loop if it breaks early.
+    # Let's re-read ToolExecutionLoop.run:
+    # for loop_index in range(max_loops):
+    #   tool_calls = adapter.get_tool_calls(current_response)
+    #   if not tool_calls: return current_response
+    #   adapter.record_assistant_message(current_response)
+    #   ...
+    #   current_response = await adapter.send_tool_responses(...)
+    #
+    # So:
+    # Loop 0:
+    #   tool_calls = [sample] (not empty)
+    #   record(initial_response) -> recorded = [initial_response]
+    #   execute tool -> result
+    #   current_response = send_tool_responses(...) -> final_response
+    # Loop 1:
+    #   tool_calls = [] (empty)
+    #   return current_response (final_response)
+    #
+    # So recorded should be [initial_response] only.
+    assert recorded == [initial_response]
     assert captured_tool_results[0].response == {"result": "ok"}
 
 

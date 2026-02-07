@@ -1,4 +1,4 @@
-from llm_core import ToolRegistry, ToolDefinition
+from generic_llm_lib.llm_core import ToolRegistry, ToolDefinition
 from typing import Callable, Dict, Any, Union, Optional, List
 
 
@@ -12,6 +12,7 @@ class OpenAIToolRegistry(ToolRegistry):
     """
 
     def __init__(self) -> None:
+        """Initialize the OpenAIToolRegistry."""
         super().__init__()
 
     def register(

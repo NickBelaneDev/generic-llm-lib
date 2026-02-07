@@ -7,8 +7,8 @@ import inspect
 import json
 from typing import Any, Callable, Dict, Optional
 
-from llm_core.exceptions.exceptions import ToolExecutionError
-from llm_core.logger import get_logger
+from generic_llm_lib.llm_core.exceptions.exceptions import ToolExecutionError
+from generic_llm_lib.llm_core.logger import get_logger
 from .adapter import ToolAdapter
 from .call_protocol import ToolCallRequest, ToolCallResult
 from .registry import ToolRegistry
@@ -80,7 +80,9 @@ class ToolExecutionLoop:
 
             if not tool_calls:
                 logger.debug("No tool calls found in response. Loop finished.")
-                adapter.record_assistant_message(current_response)
+                # We do NOT record the assistant message here because it's the final response
+                # and will be handled by the chat method's history management.
+                # adapter.record_assistant_message(current_response)
                 return current_response
 
             logger.info(f"Loop {loop_index + 1}/{self._max_function_loops}: Processing {len(tool_calls)} tool call(s).")

@@ -5,13 +5,13 @@ This tutorial explains how to use the `generic-llm-lib` library to build LLM-pow
 ## 1. Core Concepts
 
 The library is split into two main layers:
-- **`llm_core`**: Contains the base abstractions (`GenericLLM`, `ToolRegistry`).
-- **`llm_impl`**: Contains concrete implementations (e.g., `GenericGemini` for Google Gemini, `GenericOpenAI` for OpenAI).
+- **`llm_core`**: Contains the base abstractions (`GenericLLM`, `ToolRegistry`) and message models (`BaseMessage`).
+- **`llm_impl`**: Contains concrete implementations. This tutorial focuses on `GenericOpenAI`.
 
 The main workflow involves:
 1.  Defining tools (optional).
 2.  Initializing a `ToolRegistry` and registering tools.
-3.  Initializing an LLM implementation (e.g., `GenericGemini` or `GenericOpenAI`) with the registry.
+3.  Initializing the `GenericOpenAI` implementation with the registry.
 4.  Using `.chat()` for conversation or `.ask()` for single queries.
 
 ## 2. Defining Tools
@@ -42,7 +42,7 @@ def get_weather(
 Use `ToolRegistry` to manage your tools.
 
 ```python
-from llm_core.tools.registry import ToolRegistry
+from generic_llm_lib.llm_core import ToolRegistry
 
 registry = ToolRegistry()
 
@@ -62,37 +62,12 @@ def calculate_sum(
 
 ## 4. Initializing the LLM
 
-### Option A: Google Gemini
-
-Initialize the `GenericGemini` class. You need a `google.genai.Client`.
-
-```python
-import os
-from google import genai
-from llm_impl.gemini.core import GenericGemini
-
-# 1. Setup Client
-api_key = os.environ["GEMINI_API_KEY"]
-client = genai.Client(api_key=api_key)
-
-# 2. Initialize Wrapper
-agent = GenericGemini(
-    client=client,
-    model_name="gemini-1.5-flash",
-    sys_instruction="You are a helpful assistant.",
-    registry=registry,  # Pass the registry here
-    temp=0.7
-)
-```
-
-### Option B: OpenAI
-
 Initialize the `GenericOpenAI` class. You need an `openai.AsyncOpenAI` client.
 
 ```python
 import os
 from openai import AsyncOpenAI
-from llm_impl.open_api.core import GenericOpenAI
+from generic_llm_lib.llm_impl import GenericOpenAI
 
 # 1. Setup Client
 api_key = os.environ["OPENAI_API_KEY"]
@@ -111,7 +86,7 @@ agent = GenericOpenAI(
 ## 5. Chatting with the Agent
 
 ### Single Turn (`ask`)
-Use `ask` for one-off questions. It returns a provider-specific message response (e.g., `GeminiMessageResponse` or `OpenAIMessageResponse`).
+Use `ask` for one-off questions. It returns an `OpenAIMessageResponse`.
 
 ```python
 import asyncio
@@ -126,29 +101,33 @@ if __name__ == "__main__":
 ```
 
 ### Multi-Turn Chat (`chat`)
-Use `chat` to maintain history. It requires a list of history objects (provider-specific) and returns a chat response object.
+Use `chat` to maintain history. It requires a list of `BaseMessage` objects and returns an `OpenAIChatResponse`.
 
 **Note on History:**
-- **Gemini**: Uses `google.genai.types.Content` objects.
-- **OpenAI**: Uses `Dict[str, Any]` (standard OpenAI message format: `{"role": "user", "content": "..."}`).
+- The library uses `BaseMessage` objects (e.g., `UserMessage`, `AssistantMessage`) to represent history in a provider-agnostic way.
 
 ```python
-# Example loop (abstracted for both providers)
+from generic_llm_lib.llm_core.messages.models import BaseMessage
+
+
+# Example loop
 async def chat_loop():
-    history = [] # Initialize empty list
-    
+    history: list[BaseMessage] = []  # Initialize empty list
+
     while True:
         user_input = input("User: ")
         if user_input.lower() in ["exit", "quit"]:
             break
-            
+
         # The agent handles tool execution loops automatically inside .chat()
         response = await agent.chat(history, user_input)
-        
+
         print(f"Agent: {response.last_response.text}")
-        
+
         # Update history for the next turn
+        # response.history contains the full history including the new interaction
         history = response.history
+
 
 if __name__ == "__main__":
     asyncio.run(chat_loop())
@@ -156,7 +135,7 @@ if __name__ == "__main__":
 
 ## 6. Advanced: Tool Execution Loop
 
-Both `GenericGemini` and `GenericOpenAI` automatically handle the "function calling loop":
+`GenericOpenAI` automatically handles the "function calling loop":
 1.  LLM generates a tool call.
 2.  Library executes the Python function.
 3.  Library sends the result back to the LLM.
@@ -170,5 +149,4 @@ This is controlled by `max_function_loops` (default 5) in the constructor.
 | :--- | :--- | :--- |
 | `GenericLLM` | `llm_core.base` | Abstract base class for all LLMs. |
 | `ToolRegistry` | `llm_core.registry` | Manages tools and generates schemas. |
-| `GenericGemini` | `llm_impl.gemini.core` | Gemini implementation. |
-| `GenericOpenAI` | `llm_impl.open_api.core` | OpenAI implementation. |
+| `GenericOpenAI` | `llm_impl.openai_api.core` | OpenAI implementation. |

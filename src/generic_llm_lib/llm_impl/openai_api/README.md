@@ -60,16 +60,18 @@ Defines Pydantic models for structured OpenAI responses.
 ```python
 import asyncio
 from openai import AsyncOpenAI
-from src.llm_impl.open_api import GenericOpenAI, OpenAIToolRegistry
+from generic_llm_lib.llm_impl import GenericOpenAI, OpenAIToolRegistry
 
 # 1. Setup Registry and Tools
 registry = OpenAIToolRegistry()
+
 
 @registry.tool
 def get_current_time(timezone: str = "UTC"):
     """Returns the current time in the specified timezone."""
     from datetime import datetime
     return f"The time is {datetime.now()} in {timezone}"
+
 
 # 2. Initialize Client and Wrapper
 client = AsyncOpenAI(api_key="your-api-key")
@@ -79,6 +81,7 @@ llm = GenericOpenAI(
     sys_instruction="You are a helpful assistant.",
     registry=registry
 )
+
 
 # 3. Run Chat
 async def main():
@@ -90,11 +93,12 @@ async def main():
     history = []
     chat_response = await llm.chat(history, "My name is Alice.")
     print(chat_response.last_response.text)
-    
+
     # History is updated automatically in the response object
     history = chat_response.history
     chat_response = await llm.chat(history, "What is my name?")
     print(chat_response.last_response.text)
+
 
 if __name__ == "__main__":
     asyncio.run(main())

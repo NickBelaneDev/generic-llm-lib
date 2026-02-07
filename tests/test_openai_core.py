@@ -4,9 +4,10 @@ from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletion, ChatCompletionMessage
 from openai.types.chat.chat_completion import Choice
 from openai.types.completion_usage import CompletionUsage
-from llm_impl.openai_api.core import GenericOpenAI
-from llm_impl.openai_api.models import OpenAIChatResponse, OpenAIMessageResponse
-from llm_impl.openai_api.registry import OpenAIToolRegistry
+from generic_llm_lib.llm_impl import GenericOpenAI
+from generic_llm_lib.llm_impl.openai_api.models import OpenAIChatResponse, OpenAIMessageResponse
+from generic_llm_lib.llm_impl.openai_api.registry import OpenAIToolRegistry
+from generic_llm_lib.llm_core.messages.models import UserMessage, AssistantMessage, SystemMessage
 import json
 from typing import Any
 
@@ -101,9 +102,9 @@ async def test_chat_method(mock_openai_client: Any) -> None:
     # History should contain system (if added internally), user prompt, and assistant response
     # The implementation adds system prompt if history is empty
     assert len(response.history) == 3
-    assert response.history[0]["role"] == "system"
-    assert response.history[1]["role"] == "user"
-    assert response.history[2]["role"] == "assistant"
+    assert isinstance(response.history[0], SystemMessage)
+    assert isinstance(response.history[1], UserMessage)
+    assert isinstance(response.history[2], AssistantMessage)
 
 
 @pytest.mark.asyncio

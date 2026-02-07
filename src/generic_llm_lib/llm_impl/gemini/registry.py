@@ -1,5 +1,5 @@
 from google.genai import types
-from llm_core import ToolRegistry, ToolDefinition
+from generic_llm_lib.llm_core import ToolRegistry, ToolDefinition
 from typing import Callable, Dict, Any, Union, Optional
 
 
@@ -13,6 +13,7 @@ class GeminiToolRegistry(ToolRegistry):
     """
 
     def __init__(self) -> None:
+        """Initialize the GeminiToolRegistry."""
         super().__init__()
 
     def register(

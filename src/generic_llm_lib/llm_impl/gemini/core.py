@@ -1,47 +1,15 @@
 from google import genai
 from google.genai import types
-from typing import List, Tuple, Optional, Any, Sequence, cast
+from typing import List, Tuple, Optional, Any, cast
 from google.genai.types import GenerateContentResponse, Content, ContentDict
-from llm_core import GenericLLM, ToolRegistry
-from llm_core.tools import ToolExecutionLoop, ToolCallRequest, ToolCallResult, ToolAdapter
-from llm_core.logger import get_logger
+from generic_llm_lib.llm_core import GenericLLM, ToolRegistry
+from generic_llm_lib.llm_core import ToolExecutionLoop
+from generic_llm_lib.llm_core import get_logger
+from generic_llm_lib.llm_core.messages.models import BaseMessage, UserMessage, AssistantMessage, SystemMessage
 from .models import GeminiMessageResponse, GeminiChatResponse, GeminiTokens
+from .adapter import GeminiToolAdapter
 
 logger = get_logger(__name__)
-
-
-class GeminiToolAdapter(ToolAdapter):
-    """Adapter for Gemini tool handling."""
-
-    def __init__(self, chat_session: Any):
-        self.chat_session = chat_session
-
-    def get_tool_calls(self, response: GenerateContentResponse) -> Sequence[ToolCallRequest]:
-        function_calls = [p.function_call for p in (response.parts or []) if p.function_call]
-        return [
-            ToolCallRequest(
-                name=cast(str, function_call.name),
-                arguments=getattr(function_call, "args", None),
-            )
-            for function_call in function_calls
-        ]
-
-    def record_assistant_message(self, response: GenerateContentResponse) -> None:
-        # Gemini handles history internally in the chat session, so we don't need to manually append.
-        pass
-
-    def build_tool_response_message(self, result: ToolCallResult) -> types.Part:
-        return types.Part(
-            function_response=types.FunctionResponse(
-                name=result.name,
-                response=result.response,
-            )
-        )
-
-    async def send_tool_responses(self, messages: Sequence[types.Part]) -> GenerateContentResponse:
-        # We cast the result of send_message to GenerateContentResponse to satisfy mypy
-        response = await self.chat_session.send_message(list(messages))
-        return cast(GenerateContentResponse, response)
 
 
 class GenericGemini(GenericLLM):
@@ -123,7 +91,7 @@ class GenericGemini(GenericLLM):
         return response.last_response
 
     async def chat(
-        self, history: List[types.Content], user_prompt: str, clean_history: bool = False
+        self, history: List[BaseMessage], user_prompt: str, clean_history: bool = False
     ) -> GeminiChatResponse:
         """
         Processes a single turn of a chat conversation, including handling user input,
@@ -133,7 +101,7 @@ class GenericGemini(GenericLLM):
         and receive their results within the same turn, up to `max_function_loops` times.
 
         Args:
-            history: A list of `types.Content` objects representing the conversation history.
+            history: A list of `BaseMessage` objects representing the conversation history.
             user_prompt: The current message from the user.
             clean_history: Decide if the history may contain complete function_call parts or not.
 
@@ -145,19 +113,13 @@ class GenericGemini(GenericLLM):
         """
         logger.debug(f"Starting chat turn. History length: {len(history)}. Prompt: {user_prompt[:50]}...")
 
-        # Create a chat session with the provided history
-        # We cast history to the expected type for Gemini
-        # The history is List[types.Content], but Gemini expects List[Content | ContentDict] | None
-        # Since types.Content is compatible, we can cast it or rely on covariance if using Sequence
-        chat = self.client.aio.chats.create(
-            model=self.model, config=self.config, history=cast(Optional[List[Content | ContentDict]], history)
-        )
+        # Convert generic history to Gemini specific history
+        gemini_history = self._convert_history(history)
 
-        # chat = self.client.chats.create(
-        #    model=self.model,
-        #    config=self.config,
-        #    history=history
-        # )
+        # Create a chat session with the provided history
+        chat = self.client.aio.chats.create(
+            model=self.model, config=self.config, history=cast(Optional[List[Content | ContentDict]], gemini_history)
+        )
 
         # Send the user message
         try:
@@ -179,6 +141,33 @@ class GenericGemini(GenericLLM):
 
         else:
             return self._build_response(response, full_history)
+
+    def _convert_history(self, history: List[BaseMessage]) -> List[types.Content]:
+        """
+        Converts generic BaseMessage history to Gemini specific Content history.
+
+        Args:
+            history: List of BaseMessage objects.
+
+        Returns:
+            List of Gemini Content objects.
+        """
+        gemini_history = []
+        for msg in history:
+            if isinstance(msg, UserMessage):
+                gemini_history.append(types.Content(role="user", parts=[types.Part(text=msg.content)]))
+            elif isinstance(msg, AssistantMessage):
+                gemini_history.append(types.Content(role="model", parts=[types.Part(text=msg.content)]))
+            elif isinstance(msg, SystemMessage):
+                # System messages are typically handled via system_instruction in config,
+                # but if they appear in history, we might treat them as user or model depending on context,
+                # or skip if already set in config. For now, let's treat as user message or skip.
+                # Gemini doesn't have a 'system' role in chat history in the same way as OpenAI.
+                # It's usually set at initialization.
+                pass
+            # Tool messages handling would be more complex as it requires mapping back to function calls/responses
+            # For now, we focus on text history.
+        return gemini_history
 
     async def _handle_function_calls(
         self, response: GenerateContentResponse, chat: Any
@@ -209,9 +198,15 @@ class GenericGemini(GenericLLM):
 
     @staticmethod
     def _clean_history(history: List[types.Content]) -> List[types.Content]:
-        """
-        Removes intermediate tool calls and outputs from the history to save tokens.
+        """Removes intermediate tool calls and outputs from the history to save tokens.
+
         Keeps user messages, system instructions, and assistant messages that have content.
+
+        Args:
+            history: The conversation history to clean.
+
+        Returns:
+            A list of cleaned content objects.
         """
         cleaned_history = []
         for content in history:
@@ -270,6 +265,40 @@ class GenericGemini(GenericLLM):
 
         response_message = GeminiMessageResponse(text=text_response, tokens=response_tokens)
 
-        gemini_response = GeminiChatResponse(last_response=response_message, history=history)
+        # Convert Gemini history back to generic BaseMessage history
+        generic_history = GenericGemini._convert_to_generic_history(history)
+
+        gemini_response = GeminiChatResponse(last_response=response_message, history=generic_history)
 
         return gemini_response
+
+    @staticmethod
+    def _convert_to_generic_history(history: List[types.Content]) -> List[BaseMessage]:
+        """
+        Converts Gemini specific Content history to generic BaseMessage history.
+
+        Args:
+            history: List of Gemini Content objects.
+
+        Returns:
+            List of BaseMessage objects.
+        """
+        generic_history: List[BaseMessage] = []
+        for content in history:
+            role = content.role
+            # Check if parts is None before iterating
+            if content.parts is None:
+                continue
+
+            text_parts = [part.text for part in content.parts if part.text]
+            text_content = "".join(text_parts)
+
+            if not text_content:
+                continue
+
+            if role == "user":
+                generic_history.append(UserMessage(content=text_content))
+            elif role == "model":
+                generic_history.append(AssistantMessage(content=text_content))
+            # Handle other roles if necessary
+        return generic_history

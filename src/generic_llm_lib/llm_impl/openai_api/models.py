@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Any
+from typing import List, Optional
+from generic_llm_lib.llm_core.messages.models import BaseMessage
 
 
 class OpenAITokens(BaseModel):
@@ -36,8 +37,8 @@ class OpenAIChatResponse(BaseModel):
 
     Attributes:
         last_response: The last message response in the chat session.
-        history: The chat history, represented as a list of message dictionaries.
+        history: The chat history, represented as a list of BaseMessage objects.
     """
 
     last_response: OpenAIMessageResponse
-    history: List[Dict[str, Any]] = Field(default_factory=list)
+    history: List[BaseMessage] = Field(default_factory=list)

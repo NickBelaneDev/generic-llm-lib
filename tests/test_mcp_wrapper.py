@@ -1,8 +1,8 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from mcp.types import Tool as MCPTool, TextContent, CallToolResult, ListToolsResult
-from mcp_wrapper.wrapper import MCPClientWrapper
-from llm_core.tools.registry import ToolRegistry
+from generic_llm_lib.mcp_wrapper import MCPClientWrapper
+from generic_llm_lib.llm_core import ToolRegistry
 from typing import Any
 
 
@@ -23,11 +23,11 @@ def mock_session() -> Any:
 @pytest.mark.asyncio
 async def test_mcp_wrapper_lifecycle(mock_session: Any) -> None:
     """Test that the MCP wrapper correctly initializes and closes the session."""
-    with patch("mcp_wrapper.wrapper.stdio_client", new_callable=MagicMock) as mock_stdio:
+    with patch("generic_llm_lib.mcp_wrapper.wrapper.stdio_client", new_callable=MagicMock) as mock_stdio:
         mock_stdio.return_value = AsyncMock()
         mock_stdio.return_value.__aenter__.return_value = (AsyncMock(), AsyncMock())
 
-        with patch("mcp_wrapper.wrapper.ClientSession", return_value=mock_session):
+        with patch("generic_llm_lib.mcp_wrapper.wrapper.ClientSession", return_value=mock_session):
             async with MCPClientWrapper("cmd", ["arg"]) as wrapper:
                 assert wrapper._session is not None
                 # Check if initialize was called (using await count or similar if needed, but called is standard mock)
@@ -53,11 +53,11 @@ async def test_load_into_registers_tools(mock_registry: Any, mock_session: Any) 
     # Explicitly set the return value for the async method
     mock_session.list_tools = AsyncMock(return_value=tools_result)
 
-    with patch("mcp_wrapper.wrapper.stdio_client", new_callable=MagicMock) as mock_stdio:
+    with patch("generic_llm_lib.mcp_wrapper.wrapper.stdio_client", new_callable=MagicMock) as mock_stdio:
         mock_stdio.return_value = AsyncMock()
         mock_stdio.return_value.__aenter__.return_value = (AsyncMock(), AsyncMock())
 
-        with patch("mcp_wrapper.wrapper.ClientSession", return_value=mock_session):
+        with patch("generic_llm_lib.mcp_wrapper.wrapper.ClientSession", return_value=mock_session):
             async with MCPClientWrapper("cmd", ["arg"]) as wrapper:
                 await wrapper.load_into(mock_registry)
 
@@ -87,11 +87,11 @@ async def test_mcp_proxy_execution(mock_registry: Any, mock_session: Any) -> Non
         return_value=CallToolResult(content=[TextContent(type="text", text="Result from MCP")])
     )
 
-    with patch("mcp_wrapper.wrapper.stdio_client", new_callable=MagicMock) as mock_stdio:
+    with patch("generic_llm_lib.mcp_wrapper.wrapper.stdio_client", new_callable=MagicMock) as mock_stdio:
         mock_stdio.return_value = AsyncMock()
         mock_stdio.return_value.__aenter__.return_value = (AsyncMock(), AsyncMock())
 
-        with patch("mcp_wrapper.wrapper.ClientSession", return_value=mock_session):
+        with patch("generic_llm_lib.mcp_wrapper.wrapper.ClientSession", return_value=mock_session):
             async with MCPClientWrapper("cmd", ["arg"]) as wrapper:
                 await wrapper.load_into(mock_registry)
 

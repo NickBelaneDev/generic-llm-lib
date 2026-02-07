@@ -1,8 +1,9 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock
-from llm_impl.gemini.core import GenericGemini
-from llm_impl.gemini.models import GeminiChatResponse, GeminiMessageResponse
-from llm_impl.gemini.registry import GeminiToolRegistry
+from generic_llm_lib.llm_impl.gemini.core import GenericGemini
+from generic_llm_lib.llm_impl.gemini.models import GeminiChatResponse, GeminiMessageResponse
+from generic_llm_lib.llm_impl.gemini import GeminiToolRegistry
+from generic_llm_lib.llm_core.messages.models import UserMessage
 from typing import Any
 
 
@@ -56,7 +57,7 @@ async def test_chat_method(mock_genai_client: Any, mock_chat_session: Any) -> No
     # Mock history content to satisfy Pydantic validation
     mock_content = MagicMock()
     mock_content.role = "user"
-    mock_content.parts = []
+    mock_content.parts = [MagicMock(text="Hi")]
     mock_chat_session.get_history.return_value = [mock_content]
 
     gemini = GenericGemini(client=mock_genai_client, model_name="gemini-pro", sys_instruction="You are a helper.")
@@ -68,6 +69,7 @@ async def test_chat_method(mock_genai_client: Any, mock_chat_session: Any) -> No
     assert isinstance(response, GeminiChatResponse)
     assert response.last_response.text == "Chat response"
     assert len(response.history) == 1
+    assert isinstance(response.history[0], UserMessage)
 
 
 @pytest.mark.asyncio
@@ -108,7 +110,7 @@ async def test_function_calling(mock_genai_client: Any, mock_chat_session: Any) 
     # Mock history for the chat response construction
     mock_content = MagicMock()
     mock_content.role = "model"
-    mock_content.parts = []
+    mock_content.parts = [MagicMock(text="Final answer")]
     mock_chat_session.get_history.return_value = [mock_content]
 
     gemini = GenericGemini(
@@ -155,7 +157,7 @@ async def test_function_calling_with_empty_args(mock_genai_client: Any, mock_cha
 
     mock_content = MagicMock()
     mock_content.role = "model"
-    mock_content.parts = []
+    mock_content.parts = [MagicMock(text="Final answer")]
     mock_chat_session.get_history.return_value = [mock_content]
 
     gemini = GenericGemini(
