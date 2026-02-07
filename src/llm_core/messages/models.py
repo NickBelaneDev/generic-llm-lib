@@ -23,4 +23,3 @@ class ToolMessage(BaseMessage):
     author: str = "tool"
     tool_call_id: str
     name: str
-

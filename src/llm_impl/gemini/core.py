@@ -57,7 +57,7 @@ class GenericGemini(GenericLLM):
         sys_instruction: str,
         registry: Optional[ToolRegistry] = None,
         temp: float = 1.0,
-        max_tokens: int = 100,
+        max_tokens: int = 3000,
         max_function_loops: int = 5,
         tool_timeout: float = 180.0,
     ):

@@ -1,9 +1,6 @@
 from typing import Optional, Any, Callable, Type
 from pydantic import BaseModel
 
-# Placeholder for future generic types to decouple from provider specific types
-# e.g. GenericMessage, GenericRole, etc.
-
 
 class ToolDefinition(BaseModel):
     """

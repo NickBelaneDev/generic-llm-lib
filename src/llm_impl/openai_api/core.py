@@ -23,7 +23,7 @@ class GenericOpenAI(GenericLLM):
         sys_instruction: str,
         registry: Optional[ToolRegistry] = None,
         temp: float = 1.0,
-        max_tokens: int = 100,
+        max_tokens: int = 3000,
         max_function_loops: int = 5,
         tool_timeout: float = 180.0,
     ):
@@ -137,7 +137,6 @@ class GenericOpenAI(GenericLLM):
             # logger.debug(f"Initial response received. Finish reason: {response.choices[0].finish_reason}")
             pass
 
-        # Handle function calls loop
         messages, final_response = await self._handle_function_calls(messages, response, tools)
 
         # Clean history to remove intermediate tool calls and outputs to save tokens
