@@ -1,6 +1,7 @@
 from llm_core import ToolRegistry, ToolDefinition
 from typing import Callable, Dict, Any, Union, Optional, List
 
+
 class OpenAIToolRegistry(ToolRegistry):
     """
     A specialized ToolRegistry for OpenAI models.
@@ -9,14 +10,17 @@ class OpenAIToolRegistry(ToolRegistry):
     tool object generation, which is required for integrating tools
     with the OpenAI client.
     """
-    def __init__(self):
-        self.tools: Dict[str, ToolDefinition] = {}
 
-    def register(self,
-                 name_or_tool: Union[str, ToolDefinition, Callable],
-                 description: Optional[str] = None,
-                 func: Optional[Callable] = None,
-                 parameters: Optional[Any] = None):
+    def __init__(self) -> None:
+        super().__init__()
+
+    def register(
+        self,
+        name_or_tool: Union[str, ToolDefinition, Callable],
+        description: Optional[str] = None,
+        func: Optional[Callable] = None,
+        parameters: Optional[Any] = None,
+    ) -> None:
         """
         Registers a tool with the OpenAIToolRegistry.
 
@@ -47,30 +51,24 @@ class OpenAIToolRegistry(ToolRegistry):
 
         tools_list = []
         for tool in self.tools.values():
-            function_def = {
+            function_def: Dict[str, Any] = {
                 "name": tool.name,
                 "description": tool.description,
             }
-            
+
             if tool.parameters:
                 function_def["parameters"] = tool.parameters
             else:
-                 # OpenAI requires parameters to be present even if empty for some models/versions, 
-                 # but usually it's a JSON schema. If no params, we can provide an empty object schema.
-                 function_def["parameters"] = {
-                     "type": "object",
-                     "properties": {},
-                 }
+                # OpenAI requires parameters to be present even if empty for some models/versions,
+                # but usually it's a JSON schema. If no params, we can provide an empty object schema.
+                function_def["parameters"] = {"type": "object", "properties": {}}
 
-            tools_list.append({
-                "type": "function",
-                "function": function_def
-            })
+            tools_list.append({"type": "function", "function": function_def})
 
         return tools_list
 
     @property
-    def implementations(self):
+    def implementations(self) -> Dict[str, Callable]:
         """
         Returns a dictionary mapping tool names to their callable implementations.
 

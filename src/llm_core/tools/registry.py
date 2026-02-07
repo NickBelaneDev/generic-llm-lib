@@ -1,7 +1,7 @@
 from abc import abstractmethod, ABC
-from typing import Callable, Dict, Any, Union, Optional, get_origin, Annotated, get_args
+from typing import Callable, Dict, Any, Union, Optional, get_origin, Annotated, get_args, cast
 
-import jsonref
+import jsonref  # type: ignore
 from pydantic.fields import FieldInfo
 from pydantic import create_model
 
@@ -13,6 +13,7 @@ import inspect
 
 logger = get_logger(__name__)
 
+
 class ToolRegistry(ABC):
     """
     A central registry to manage and access all available LLM tools.
@@ -21,14 +22,16 @@ class ToolRegistry(ABC):
     maps function names to their actual Python implementations.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.tools: Dict[str, ToolDefinition] = {}
 
-    def register(self,
-                 name_or_tool: Union[str, ToolDefinition, Callable],
-                 description: Optional[str] = None,
-                 func: Optional[Callable] = None,
-                 parameters: Optional[Any] = None):
+    def register(
+        self,
+        name_or_tool: Union[str, ToolDefinition, Callable],
+        description: Optional[str] = None,
+        func: Optional[Callable] = None,
+        parameters: Optional[Any] = None,
+    ) -> None:
         """
         Register a new tool for the LLM.
 
@@ -63,18 +66,16 @@ class ToolRegistry(ABC):
                 tool = ToolDefinition(name=name_or_tool, description=description, func=func, parameters=parameters)
 
         if tool.name in self.tools:
-             msg = f"Tool '{tool.name}' is already registered."
-             logger.error(msg)
-             raise ToolRegistrationError(msg)
+            msg = f"Tool '{tool.name}' is already registered."
+            logger.error(msg)
+            raise ToolRegistrationError(msg)
 
         self.tools[tool.name] = tool
         logger.info(f"Successfully registered tool: '{tool.name}'")
 
     @staticmethod
     def _generate_tool_definition(
-            func: Callable,
-            name: Optional[str] = None,
-            description: Optional[str] = None
+        func: Callable, name: Optional[str] = None, description: Optional[str] = None
     ) -> ToolDefinition:
 
         tool_name = name or func.__name__
@@ -88,7 +89,7 @@ class ToolRegistry(ABC):
             description = doc
 
         signature = inspect.signature(func)
-        fields = {}
+        fields: Dict[str, Any] = {}
 
         for param_name, param in signature.parameters.items():
             if param_name == "self":
@@ -117,41 +118,40 @@ class ToolRegistry(ABC):
             pydantic_default = default if default != inspect.Parameter.empty else ...
             fields[param_name] = (annotation, pydantic_default)
 
-        dynamic_params_model = create_model(f"{tool_name}Params", **fields)
+        # We need to cast fields to Any to satisfy mypy's strictness on kwargs unpacking for create_model
+        # create_model expects **field_definitions: Any
+        dynamic_params_model = create_model(f"{tool_name}Params", **cast(Dict[str, Any], fields))
 
         raw_schema = dynamic_params_model.model_json_schema()
-        
+
         # 1. Check for recursion
         SchemaValidator.assert_no_recursive_refs(raw_schema)
-        
+
         # 2. Resolve refs using jsonref
         # proxies=False ensures we get a plain dict back, not JsonRef objects
         parameters_schema = jsonref.replace_refs(raw_schema, proxies=False)
-        
+
         # 3. Sanitize schema (remove $defs, title, etc.)
         parameters_schema = SchemaValidator.sanitize_schema(parameters_schema)
 
         return ToolDefinition(
-            name=tool_name, 
-            description=description, 
-            func=func, 
+            name=tool_name,
+            description=description,
+            func=func,
             parameters=parameters_schema,
-            args_model=dynamic_params_model
+            args_model=dynamic_params_model,
         )
-
 
     def tool(self, func: Callable) -> Callable:
         """A decorator to turn a function into an LLM tool."""
         self.register(func)
         return func
 
-
     @property
     @abstractmethod
-    def tool_object(self):
+    def tool_object(self) -> Any:
         """Constructs the final Tool object specific to the LLM provider."""
         pass
-
 
     @property
     def implementations(self) -> Dict[str, Callable]:

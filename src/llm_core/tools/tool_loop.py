@@ -23,17 +23,27 @@ class ToolExecutionLoop:
     and error handling in a provider-agnostic way.
     """
 
+    # Exceptions that are considered recoverable and should be returned to the LLM.
+    # System errors (like ConnectionError, MemoryError) are NOT included and will
+    # propagate, stopping the loop.
+    RECOVERABLE_ERRORS = (
+        ToolExecutionError,
+        FileNotFoundError,
+        FileExistsError,
+        PermissionError,
+        IsADirectoryError,
+        NotADirectoryError,
+        ValueError,
+        TypeError,
+    )
+
     def __init__(
         self,
         *,
         registry: Optional[ToolRegistry],
         max_function_loops: int,
         tool_timeout: float = 180.0,
-        argument_error_formatter: Optional[
-            Callable[
-                [str, Exception], str
-            ]
-        ] = None,
+        argument_error_formatter: Optional[Callable[[str, Exception], str]] = None,
     ) -> None:
         """Initialize the tool execution loop.
 
@@ -104,7 +114,7 @@ class ToolExecutionLoop:
             The result of the tool execution, including any errors.
         """
         logger.debug(f"Handling tool call: {tool_call.name} (ID: {tool_call.call_id})")
-        
+
         if not self._registry or tool_call.name not in self._registry.tools:
             msg = f"Tool '{tool_call.name}' not found in registry."
             logger.warning(msg)
@@ -145,20 +155,9 @@ class ToolExecutionLoop:
             logger.info(f"Executing tool '{tool_call.name}'...")
             function_result = await self._execute_tool(tool_def.func, function_args)
             logger.info(f"Tool '{tool_call.name}' executed successfully.")
-        except ToolExecutionError as exc:
+        except self.RECOVERABLE_ERRORS as exc:
             msg = str(exc)
-            logger.warning(f"ToolExecutionError in '{tool_call.name}': {msg}")
-            return ToolCallResult(
-                name=tool_call.name,
-                response={"error": msg},
-                call_id=tool_call.call_id,
-            )
-        except Exception as exc:
-            logger.error(
-                f"Unexpected error executing tool '{tool_call.name}': {exc}",
-                exc_info=True,
-            )
-            msg = f"Unexpected error executing tool '{tool_call.name}': {exc}"
+            logger.warning(f"Recoverable error in '{tool_call.name}': {msg} ({type(exc).__name__})")
             return ToolCallResult(
                 name=tool_call.name,
                 response={"error": msg},

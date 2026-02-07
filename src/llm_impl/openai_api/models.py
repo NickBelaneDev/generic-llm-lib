@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 
+
 class OpenAITokens(BaseModel):
     """
     Represents the token counts for an OpenAI model response.
@@ -10,9 +11,11 @@ class OpenAITokens(BaseModel):
         completion_tokens: The number of tokens in the completion response.
         total_tokens: The total number of tokens used.
     """
+
     prompt_tokens: Optional[int] = Field(default=None)
     completion_tokens: Optional[int] = Field(default=None)
     total_tokens: Optional[int] = Field(default=None)
+
 
 class OpenAIMessageResponse(BaseModel):
     """
@@ -22,8 +25,10 @@ class OpenAIMessageResponse(BaseModel):
         text: The text content of the response.
         tokens: The token counts for the response.
     """
+
     text: str
     tokens: OpenAITokens
+
 
 class OpenAIChatResponse(BaseModel):
     """
@@ -33,5 +38,6 @@ class OpenAIChatResponse(BaseModel):
         last_response: The last message response in the chat session.
         history: The chat history, represented as a list of message dictionaries.
     """
+
     last_response: OpenAIMessageResponse
     history: List[Dict[str, Any]] = Field(default_factory=list)

@@ -111,8 +111,7 @@ class SchemaValidator:
                 new_schema[key] = SchemaValidator.sanitize_schema(value)
             elif isinstance(value, list):
                 new_schema[key] = [
-                    SchemaValidator.sanitize_schema(item) if isinstance(item, dict) else item
-                    for item in value
+                    SchemaValidator.sanitize_schema(item) if isinstance(item, dict) else item for item in value
                 ]
 
         return new_schema

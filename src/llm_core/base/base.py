@@ -1,4 +1,4 @@
-from typing import List, Any
+from typing import List, Any, Optional
 from abc import ABC, abstractmethod
 
 
@@ -7,6 +7,7 @@ class GenericLLM(ABC):
     Abstract Base Class for Generic LLM implementations.
     Defines the standard interface for chatting and asking questions.
     """
+
     @abstractmethod
     async def chat(self, history: List[Any], user_prompt: str) -> Any:
         """
@@ -23,7 +24,7 @@ class GenericLLM(ABC):
         pass
 
     @abstractmethod
-    async def ask(self, prompt: str, model: str = None) -> Any:
+    async def ask(self, prompt: str, model: Optional[str] = None) -> Any:
         """
         Single-turn question without maintaining history.
 

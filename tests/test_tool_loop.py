@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import AsyncMock
 from pydantic import BaseModel
-from typing import Sequence, Any
+from typing import Sequence, Any, Dict, List, Callable, Awaitable, cast
 
 from llm_core.tools import ToolExecutionLoop, ToolCallRequest, ToolCallResult, ToolAdapter
 from llm_impl.openai_api.registry import OpenAIToolRegistry
@@ -13,7 +13,13 @@ class SampleArgs(BaseModel):
 
 
 class MockAdapter(ToolAdapter):
-    def __init__(self, get_tool_calls_func, record_func, build_func, send_func):
+    def __init__(
+        self,
+        get_tool_calls_func: Callable[[Any], Sequence[ToolCallRequest]],
+        record_func: Callable[[Any], None],
+        build_func: Callable[[ToolCallResult], Any],
+        send_func: Callable[[Sequence[Any]], Awaitable[Any]],
+    ) -> None:
         self.get_tool_calls_func = get_tool_calls_func
         self.record_func = record_func
         self.build_func = build_func
@@ -33,7 +39,7 @@ class MockAdapter(ToolAdapter):
 
 
 @pytest.mark.asyncio
-async def test_tool_execution_loop_runs_tools():
+async def test_tool_execution_loop_runs_tools() -> None:
     registry = OpenAIToolRegistry()
     tool_func = AsyncMock(return_value="ok")
     registry.tools["sample"] = ToolDefinition(
@@ -47,44 +53,52 @@ async def test_tool_execution_loop_runs_tools():
         max_function_loops=2,
     )
 
-    initial_response = {"tool_calls": [ToolCallRequest(name="sample", arguments={"a": 1})]}
-    final_response = {"tool_calls": []}
-    recorded = []
-    captured_tool_results = []
+    initial_response: Dict[str, Any] = {
+        "tool_calls": [ToolCallRequest(name="sample", arguments={"a": 1}, call_id="call_1")]
+    }
+    final_response: Dict[str, Any] = {"tool_calls": []}
+    recorded: List[Any] = []
+    captured_tool_results: List[ToolCallResult] = []
 
-    def get_tool_calls(response):
-        return response["tool_calls"]
+    def get_tool_calls(response: Any) -> Sequence[ToolCallRequest]:
+        # Cast to Sequence[ToolCallRequest] to satisfy mypy
+        return cast(Sequence[ToolCallRequest], response["tool_calls"])
 
-    def record_assistant_message(response):
+    def record_assistant_message(response: Any) -> None:
         recorded.append(response)
 
-    def build_tool_response_message(tool_result: ToolCallResult):
+    def build_tool_response_message(tool_result: ToolCallResult) -> Any:
         captured_tool_results.append(tool_result)
         return tool_result
 
-    async def send_tool_responses(tool_messages):
+    async def send_tool_responses(tool_messages: Sequence[Any]) -> Any:
         return final_response
 
-    adapter = MockAdapter(
-        get_tool_calls,
-        record_assistant_message,
-        build_tool_response_message,
-        send_tool_responses
-    )
+    adapter = MockAdapter(get_tool_calls, record_assistant_message, build_tool_response_message, send_tool_responses)
 
-    response = await loop.run(
-        initial_response=initial_response,
-        adapter=adapter
-    )
+    response = await loop.run(initial_response=initial_response, adapter=adapter)
 
     tool_func.assert_called_once_with(a=1)
     assert response == final_response
+    # The loop records the initial response, then sends tool responses which returns final_response.
+    # The final_response is NOT recorded by the loop itself, it's returned.
+    # Wait, let's check ToolExecutionLoop.run implementation.
+    # It calls adapter.record_assistant_message(initial_response) at the start.
+    # Then it loops. Inside loop:
+    #   adapter.send_tool_responses(tool_messages) -> returns new_response
+    #   adapter.record_assistant_message(new_response)
+    # So if loop runs once (one tool call), we expect:
+    # 1. record(initial_response)
+    # 2. send_tool_responses -> final_response
+    # 3. record(final_response)
+    # 4. loop checks final_response for tool calls -> empty -> break
+    # So recorded should be [initial_response, final_response]
     assert recorded == [initial_response, final_response]
     assert captured_tool_results[0].response == {"result": "ok"}
 
 
 @pytest.mark.asyncio
-async def test_tool_execution_loop_handles_invalid_arguments():
+async def test_tool_execution_loop_handles_invalid_arguments() -> None:
     registry = OpenAIToolRegistry()
 
     async def tool_func(required_value: int) -> int:
@@ -102,34 +116,29 @@ async def test_tool_execution_loop_handles_invalid_arguments():
         max_function_loops=1,
     )
 
-    initial_response = {"tool_calls": [ToolCallRequest(name="validated", arguments={"required_value": "bad"})]}
-    recorded = []
-    tool_results = []
+    initial_response: Dict[str, Any] = {
+        "tool_calls": [ToolCallRequest(name="validated", arguments={"required_value": "bad"}, call_id="call_2")]
+    }
+    recorded: List[Any] = []
+    tool_results: List[ToolCallResult] = []
 
-    def get_tool_calls(response):
-        return response["tool_calls"]
+    def get_tool_calls(response: Any) -> Sequence[ToolCallRequest]:
+        # Cast to Sequence[ToolCallRequest] to satisfy mypy
+        return cast(Sequence[ToolCallRequest], response["tool_calls"])
 
-    def record_assistant_message(response):
+    def record_assistant_message(response: Any) -> None:
         recorded.append(response)
 
-    def build_tool_response_message(tool_result: ToolCallResult):
+    def build_tool_response_message(tool_result: ToolCallResult) -> Any:
         tool_results.append(tool_result)
         return tool_result
 
-    async def send_tool_responses(tool_messages):
+    async def send_tool_responses(tool_messages: Sequence[Any]) -> Any:
         return {"tool_calls": []}
 
-    adapter = MockAdapter(
-        get_tool_calls,
-        record_assistant_message,
-        build_tool_response_message,
-        send_tool_responses
-    )
+    adapter = MockAdapter(get_tool_calls, record_assistant_message, build_tool_response_message, send_tool_responses)
 
-    await loop.run(
-        initial_response=initial_response,
-        adapter=adapter
-    )
+    await loop.run(initial_response=initial_response, adapter=adapter)
 
     assert tool_results
     error_message = tool_results[0].response["error"]

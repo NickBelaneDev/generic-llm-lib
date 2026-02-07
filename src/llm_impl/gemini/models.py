@@ -14,11 +14,13 @@ class GeminiTokens(BaseModel):
         thoughts_token_count: The number of tokens in the thoughts.
         tool_use_prompt_token_count: The number of tokens in the tool use prompt.
     """
+
     prompt_token_count: Optional[int] = Field(default=None)
     candidate_token_count: Optional[int] = Field(default=None)
     total_token_count: Optional[int] = Field(default=None)
     thoughts_token_count: Optional[int] = Field(default=None)
     tool_use_prompt_token_count: Optional[int] = Field(default=None)
+
 
 class GeminiMessageResponse(BaseModel):
     """
@@ -28,8 +30,10 @@ class GeminiMessageResponse(BaseModel):
         text: The text content of the response.
         tokens: The token counts for the response.
     """
+
     text: str
     tokens: GeminiTokens
+
 
 class GeminiChatResponse(BaseModel):
     """
@@ -39,5 +43,6 @@ class GeminiChatResponse(BaseModel):
         last_response: The last message response in the chat session.
         history: The chat history, represented as a list of Content objects.
     """
+
     last_response: GeminiMessageResponse
     history: List[types.Content] = Field(default_factory=list)

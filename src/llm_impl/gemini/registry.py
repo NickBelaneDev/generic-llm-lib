@@ -2,6 +2,7 @@ from google.genai import types
 from llm_core import ToolRegistry, ToolDefinition
 from typing import Callable, Dict, Any, Union, Optional
 
+
 class GeminiToolRegistry(ToolRegistry):
     """
     A specialized ToolRegistry for Google Gemini models.
@@ -10,14 +11,17 @@ class GeminiToolRegistry(ToolRegistry):
     tool object generation, which is required for integrating tools
     with the Google Generative AI client.
     """
-    def __init__(self):
-        self.tools: Dict[str, ToolDefinition] = {}
 
-    def register(self,
-                 name_or_tool: Union[str, ToolDefinition, Callable],
-                 description: Optional[str] = None,
-                 func: Optional[Callable] = None,
-                 parameters: Optional[Any] = None):
+    def __init__(self) -> None:
+        super().__init__()
+
+    def register(
+        self,
+        name_or_tool: Union[str, ToolDefinition, Callable],
+        description: Optional[str] = None,
+        func: Optional[Callable] = None,
+        parameters: Optional[Any] = None,
+    ) -> None:
         """
         Registers a tool with the GeminiToolRegistry.
 
@@ -33,7 +37,6 @@ class GeminiToolRegistry(ToolRegistry):
             parameters: A dictionary or types.Schema defining the tool's input parameters. Required if `name_or_tool` is a string.
         """
         super().register(name_or_tool, description, func, parameters)
-
 
     @property
     def tool_object(self) -> types.Tool | None:
@@ -55,21 +58,16 @@ class GeminiToolRegistry(ToolRegistry):
             # If it's already a types.Schema (or similar), it's passed through.
 
             if tool.parameters:
-                declarations.append(types.FunctionDeclaration(
-                    name=tool.name,
-                    description=tool.description,
-                    parameters=tool.parameters
-                ))
+                declarations.append(
+                    types.FunctionDeclaration(name=tool.name, description=tool.description, parameters=tool.parameters)
+                )
             else:
-                declarations.append(types.FunctionDeclaration(
-                    name=tool.name,
-                    description=tool.description
-                ))
+                declarations.append(types.FunctionDeclaration(name=tool.name, description=tool.description))
 
         return types.Tool(function_declarations=declarations)
 
     @property
-    def implementations(self):
+    def implementations(self) -> Dict[str, Callable]:
         """
         Returns a dictionary mapping tool names to their callable implementations.
 

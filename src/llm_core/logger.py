@@ -3,6 +3,7 @@ import sys
 
 _LOGGER_NAME = "generic_llm_lib"
 
+
 def get_logger(name: str | None = None) -> logging.Logger:
     """Get a logger instance for the library.
 
@@ -16,9 +17,9 @@ def get_logger(name: str | None = None) -> logging.Logger:
         return logging.getLogger(f"{_LOGGER_NAME}.{name}")
     return logging.getLogger(_LOGGER_NAME)
 
+
 def setup_logging(
-    level: int = logging.INFO,
-    format_str: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level: int = logging.INFO, format_str: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 ) -> None:
     """Setup default logging configuration for the library.
 
@@ -31,7 +32,7 @@ def setup_logging(
         format_str: Log format string.
     """
     logger = logging.getLogger(_LOGGER_NAME)
-    
+
     # Avoid adding multiple handlers if called multiple times
     if logger.handlers:
         return
@@ -41,6 +42,7 @@ def setup_logging(
     handler.setFormatter(formatter)
     logger.addHandler(handler)
     logger.setLevel(level)
+
 
 # Set default NullHandler to avoid "No handler found" warnings
 logging.getLogger(_LOGGER_NAME).addHandler(logging.NullHandler())

@@ -1,6 +1,6 @@
 from openai import AsyncOpenAI
-from openai.types.chat import ChatCompletion
-from typing import List, Tuple, Optional, Any, Dict
+from openai.types.chat import ChatCompletion, ChatCompletionToolParam
+from typing import List, Tuple, Optional, Any, Dict, Iterable, cast
 import logging
 from llm_core import GenericLLM, ToolRegistry
 from llm_core.tools import ToolExecutionLoop
@@ -9,22 +9,24 @@ from .adapter import OpenAIToolAdapter
 
 logger = logging.getLogger(__name__)
 
+
 class GenericOpenAI(GenericLLM):
     """
     Implementation of GenericLLM for OpenAI's models.
     Handles chat sessions and automatic function calling loops.
     """
 
-    def __init__(self,
-                 client: AsyncOpenAI,
-                 model_name: str,
-                 sys_instruction: str,
-                 registry: Optional[ToolRegistry] = None,
-                 temp: float = 1.0,
-                 max_tokens: int = 100,
-                 max_function_loops: int = 5,
-                 tool_timeout: float = 180.0
-                 ):
+    def __init__(
+        self,
+        client: AsyncOpenAI,
+        model_name: str,
+        sys_instruction: str,
+        registry: Optional[ToolRegistry] = None,
+        temp: float = 1.0,
+        max_tokens: int = 100,
+        max_function_loops: int = 5,
+        tool_timeout: float = 180.0,
+    ):
         """
         Initializes the GenericOpenAI LLM wrapper.
 
@@ -47,7 +49,7 @@ class GenericOpenAI(GenericLLM):
         self.tool_timeout = tool_timeout
 
         self.client: AsyncOpenAI = client
-        
+
         self._tool_loop = ToolExecutionLoop(
             registry=registry,
             max_function_loops=max_function_loops,
@@ -55,7 +57,7 @@ class GenericOpenAI(GenericLLM):
             argument_error_formatter=self._format_argument_error,
         )
 
-    async def ask(self, prompt: str, model: str = None) -> OpenAIMessageResponse:
+    async def ask(self, prompt: str, model: Optional[str] = None) -> OpenAIMessageResponse:
         """
         Generates a text response from the LLM based on a single prompt.
         This method handles potential function calls internally by initiating a temporary chat session.
@@ -74,9 +76,9 @@ class GenericOpenAI(GenericLLM):
 
         return response.last_response
 
-    async def chat(self,
-                   history: List[Dict[str, Any]],
-                   user_prompt: str) -> OpenAIChatResponse:
+    async def chat(
+        self, history: List[Dict[str, Any]], user_prompt: str, clean_history: bool = False
+    ) -> OpenAIChatResponse:
         """
         Processes a single turn of a chat conversation, including handling user input,
         generating LLM responses, and executing any requested function calls.
@@ -87,6 +89,7 @@ class GenericOpenAI(GenericLLM):
         Args:
             history: A list of message dictionaries representing the conversation history.
             user_prompt: The current message from the user.
+            clean_history: Removes function calls from the chat history.
 
         Returns:
             OpenAIChatResponse: An object containing:
@@ -99,33 +102,34 @@ class GenericOpenAI(GenericLLM):
         # Prepare the messages list. If history is empty, add system instruction first.
         messages = list(history)
         if not messages and self.sys_instruction:
-            messages.append({
-                "role": "system",
-                "content": self.sys_instruction
-            })
-        
+            messages.append({"role": "system", "content": self.sys_instruction})
+
         # Add user message
-        messages.append({
-            "role": "user",
-            "content": user_prompt
-        })
+        messages.append({"role": "user", "content": user_prompt})
 
         # Get tools configuration
-        tools = None
+        tools: Iterable[ChatCompletionToolParam] | None = None
         if self.registry:
-            tools = self.registry.tool_object
+            # We cast the tool_object to the expected type for OpenAI
+            # The registry returns List[Dict[str, Any]], which is compatible with ChatCompletionToolParam
+            # if structured correctly.
+            tools = cast(Iterable[ChatCompletionToolParam], self.registry.tool_object)
+
             # logger.debug(f"Tools registered: {[t.get('function', {}).get('name') for t in tools]}")
 
         # Initial call to OpenAI
         # logger.debug(f"Sending initial request to OpenAI model: {self.model}")
+        # We need to cast messages to the expected type for OpenAI
+        # The history is List[Dict[str, Any]], but OpenAI expects Iterable[ChatCompletionMessageParam]
+        # Since Dict[str, Any] is compatible with the structure, we can cast it.
         response = await self.client.chat.completions.create(
             model=self.model,
-            messages=messages,
-            tools=tools,
+            messages=cast(Iterable[Any], messages),
+            tools=tools,  # type: ignore
             temperature=self.temperature,
-            max_tokens=self.max_tokens
+            max_tokens=self.max_tokens,
         )
-        
+
         if not response.choices:
             # logger.debug(f"Initial response has no choices. Response dump: {response.model_dump()}")
             pass
@@ -135,16 +139,20 @@ class GenericOpenAI(GenericLLM):
 
         # Handle function calls loop
         messages, final_response = await self._handle_function_calls(messages, response, tools)
-        
-        # Clean history to remove intermediate tool calls and outputs to save tokens
-        clean_history = self._clean_history(messages)
-        
-        return self._build_response(final_response, clean_history)
 
-    async def _handle_function_calls(self, 
-                                     messages: List[Dict[str, Any]], 
-                                     initial_response: ChatCompletion,
-                                     tools: Optional[List[Dict[str, Any]]]) -> Tuple[List[Dict[str, Any]], ChatCompletion]:
+        # Clean history to remove intermediate tool calls and outputs to save tokens
+        if clean_history:
+            logger.debug("Cleaning chat history (removing intermediate tool calls).")
+            messages = self._clean_history(messages)
+
+        return self._build_response(final_response, messages)
+
+    async def _handle_function_calls(
+        self,
+        messages: List[Dict[str, Any]],
+        initial_response: ChatCompletion,
+        tools: Optional[Iterable[ChatCompletionToolParam]],
+    ) -> Tuple[List[Dict[str, Any]], ChatCompletion]:
         """
         Handles the function calling loop.
         Delegates to ToolExecutionLoop via OpenAIToolAdapter.
@@ -160,21 +168,25 @@ class GenericOpenAI(GenericLLM):
         if not initial_response.choices:
             return messages, initial_response
 
+        # Convert Iterable[ChatCompletionToolParam] back to List[Dict[str, Any]] for the adapter if needed,
+        # or update adapter to accept Iterable. For now, we assume it's a list or cast it.
+        # We cast tools to Iterable[Dict[str, Any]] to satisfy the list constructor if needed, or just use list()
+        # The error was: Argument 1 to "list" has incompatible type "Iterable[ChatCompletionFunctionToolParam]"; expected "Iterable[dict[str, Any]]"
+        # ChatCompletionFunctionToolParam is a TypedDict, which is compatible with dict at runtime but mypy is strict.
+        tools_list: Optional[List[Dict[str, Any]]] = list(cast(Iterable[Dict[str, Any]], tools)) if tools else None
+
         adapter = OpenAIToolAdapter(
             client=self.client,
             model=self.model,
             messages=messages,
-            tools=tools,
+            tools=tools_list,
             temperature=self.temperature,
-            max_tokens=self.max_tokens
+            max_tokens=self.max_tokens,
         )
 
-        final_response = await self._tool_loop.run(
-            initial_response=initial_response,
-            adapter=adapter
-        )
+        final_response = await self._tool_loop.run(initial_response=initial_response, adapter=adapter)
 
-        return messages, final_response
+        return messages, cast(ChatCompletion, final_response)
 
     @staticmethod
     def _clean_history(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -188,7 +200,7 @@ class GenericOpenAI(GenericLLM):
             role = msg.get("role")
             if role == "tool":
                 continue
-            
+
             if role == "assistant":
                 # If the message has tool_calls, we only keep it if it has content.
                 # We strip the tool_calls field to avoid sending it back to the model in future turns.
@@ -204,7 +216,7 @@ class GenericOpenAI(GenericLLM):
             else:
                 # Keep system and user messages
                 cleaned_messages.append(msg)
-        
+
         # logger.debug(f"History cleaned. New size: {len(cleaned_messages)}")
         return cleaned_messages
 
@@ -230,21 +242,15 @@ class GenericOpenAI(GenericLLM):
             response_tokens = OpenAITokens(
                 prompt_tokens=usage.prompt_tokens,
                 completion_tokens=usage.completion_tokens,
-                total_tokens=usage.total_tokens
+                total_tokens=usage.total_tokens,
             )
         else:
             response_tokens = OpenAITokens()
 
-        response_message = OpenAIMessageResponse(
-            text=message_content,
-            tokens=response_tokens
-        )
+        response_message = OpenAIMessageResponse(text=message_content, tokens=response_tokens)
 
-        openai_response = OpenAIChatResponse(
-            last_response=response_message,
-            history=history
-        )
-    
+        openai_response = OpenAIChatResponse(last_response=response_message, history=history)
+
         return openai_response
 
     @staticmethod

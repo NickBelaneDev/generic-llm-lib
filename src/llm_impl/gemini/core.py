@@ -1,13 +1,14 @@
 from google import genai
 from google.genai import types
-from typing import List, Tuple, Optional, Any, Sequence
-from google.genai.types import GenerateContentResponse
+from typing import List, Tuple, Optional, Any, Sequence, cast
+from google.genai.types import GenerateContentResponse, Content, ContentDict
 from llm_core import GenericLLM, ToolRegistry
 from llm_core.tools import ToolExecutionLoop, ToolCallRequest, ToolCallResult, ToolAdapter
 from llm_core.logger import get_logger
 from .models import GeminiMessageResponse, GeminiChatResponse, GeminiTokens
 
 logger = get_logger(__name__)
+
 
 class GeminiToolAdapter(ToolAdapter):
     """Adapter for Gemini tool handling."""
@@ -19,7 +20,7 @@ class GeminiToolAdapter(ToolAdapter):
         function_calls = [p.function_call for p in (response.parts or []) if p.function_call]
         return [
             ToolCallRequest(
-                name=function_call.name,
+                name=cast(str, function_call.name),
                 arguments=getattr(function_call, "args", None),
             )
             for function_call in function_calls
@@ -38,7 +39,9 @@ class GeminiToolAdapter(ToolAdapter):
         )
 
     async def send_tool_responses(self, messages: Sequence[types.Part]) -> GenerateContentResponse:
-        return self.chat_session.send_message(list(messages))
+        # We cast the result of send_message to GenerateContentResponse to satisfy mypy
+        response = await self.chat_session.send_message(list(messages))
+        return cast(GenerateContentResponse, response)
 
 
 class GenericGemini(GenericLLM):
@@ -47,16 +50,17 @@ class GenericGemini(GenericLLM):
     Handles chat sessions and automatic function calling loops.
     """
 
-    def __init__(self,
-                 client: genai.Client,
-                 model_name: str,
-                 sys_instruction: str,
-                 registry: Optional[ToolRegistry] = None,
-                 temp: float = 1.0,
-                 max_tokens: int = 100,
-                 max_function_loops: int = 5,
-                 tool_timeout: float = 180.0
-                 ):
+    def __init__(
+        self,
+        client: genai.Client,
+        model_name: str,
+        sys_instruction: str,
+        registry: Optional[ToolRegistry] = None,
+        temp: float = 1.0,
+        max_tokens: int = 100,
+        max_function_loops: int = 5,
+        tool_timeout: float = 180.0,
+    ):
         """
         Initializes the GenericGemini LLM wrapper.
 
@@ -89,17 +93,13 @@ class GenericGemini(GenericLLM):
                 logger.info(f"Registered {len(self.registry.tools)} tools for Gemini model '{model_name}'.")
 
         self.config: types.GenerateContentConfig = types.GenerateContentConfig(
-            system_instruction=sys_instruction,
-            temperature=temp,
-            max_output_tokens=max_tokens,
-
-            tools=tools_config
+            system_instruction=sys_instruction, temperature=temp, max_output_tokens=max_tokens, tools=tools_config
         )
 
         self.client: genai.Client = client
         logger.info(f"Initialized GenericGemini with model='{model_name}', temp={temp}, max_tokens={max_tokens}")
 
-    async def ask(self, prompt: str, model: str = None) -> GeminiMessageResponse:
+    async def ask(self, prompt: str, model: Optional[str] = None) -> GeminiMessageResponse:
         """
         Generates a text response from the LLM based on a single prompt.
         This method handles potential function calls internally by initiating a temporary chat session.
@@ -113,7 +113,7 @@ class GenericGemini(GenericLLM):
         """
         if not model:
             model = self.model
-        
+
         logger.debug(f"Asking Gemini (model={model}): {prompt[:50]}...")
 
         # We use a temporary chat session to handle the tool execution loop (Model -> Tool -> Model)
@@ -123,11 +123,8 @@ class GenericGemini(GenericLLM):
         return response.last_response
 
     async def chat(
-            self,
-            history: List[types.Content],
-            user_prompt: str,
-            clean_history: bool = False) \
-            -> GeminiChatResponse:
+        self, history: List[types.Content], user_prompt: str, clean_history: bool = False
+    ) -> GeminiChatResponse:
         """
         Processes a single turn of a chat conversation, including handling user input,
         generating LLM responses, and executing any requested function calls.
@@ -149,24 +146,30 @@ class GenericGemini(GenericLLM):
         logger.debug(f"Starting chat turn. History length: {len(history)}. Prompt: {user_prompt[:50]}...")
 
         # Create a chat session with the provided history
-        chat = self.client.chats.create(
-            model=self.model,
-            config=self.config,
-            history=history
+        # We cast history to the expected type for Gemini
+        # The history is List[types.Content], but Gemini expects List[Content | ContentDict] | None
+        # Since types.Content is compatible, we can cast it or rely on covariance if using Sequence
+        chat = self.client.aio.chats.create(
+            model=self.model, config=self.config, history=cast(Optional[List[Content | ContentDict]], history)
         )
-        
+
+        # chat = self.client.chats.create(
+        #    model=self.model,
+        #    config=self.config,
+        #    history=history
+        # )
+
         # Send the user message
         try:
-            _response = chat.send_message(user_prompt)
+            _response = await chat.send_message(user_prompt)
         except Exception as e:
             logger.error(f"Error sending message to Gemini: {e}", exc_info=True)
             raise
 
         response, chat = await self._handle_function_calls(_response, chat)
-        
+
         # Get full history
         full_history = chat.get_history()
-        
 
         # Clean history to remove intermediate tool calls and outputs to save tokens
         if clean_history:
@@ -177,8 +180,9 @@ class GenericGemini(GenericLLM):
         else:
             return self._build_response(response, full_history)
 
-    
-    async def _handle_function_calls(self, response: GenerateContentResponse, chat) -> Tuple[GenerateContentResponse, Any]:
+    async def _handle_function_calls(
+        self, response: GenerateContentResponse, chat: Any
+    ) -> Tuple[GenerateContentResponse, Any]:
         """
         Handles the function calling loop.
         Iterates through the response to check for function calls, executes them,
@@ -192,17 +196,16 @@ class GenericGemini(GenericLLM):
         Returns:
             Tuple[GenerateContentResponse, Any]: The final response from the model and the updated chat object.
         """
-        
+
         if not response:
             return response, chat
 
         adapter = GeminiToolAdapter(chat)
-        final_response = await self._tool_loop.run(
-            initial_response=response,
-            adapter=adapter
-        )
+        final_response = await self._tool_loop.run(initial_response=response, adapter=adapter)
 
-        return final_response, chat
+        # Ensure we return a GenerateContentResponse, even if tool loop returns something else (though it shouldn't)
+        # We cast to Any first to avoid mypy complaining about incompatible types if it thinks final_response is something else
+        return cast(GenerateContentResponse, cast(Any, final_response)), chat
 
     @staticmethod
     def _clean_history(history: List[types.Content]) -> List[types.Content]:
@@ -216,7 +219,7 @@ class GenericGemini(GenericLLM):
             if not content.parts:
                 cleaned_history.append(content)
                 continue
-            
+
             # Check if it is a function response
             has_function_response = any(part.function_response for part in content.parts)
             if has_function_response:
@@ -224,11 +227,11 @@ class GenericGemini(GenericLLM):
 
             # Check for function calls
             has_function_call = any(part.function_call for part in content.parts)
-            
+
             if has_function_call:
                 # Filter out function_call parts, keep text parts
                 new_parts = [part for part in content.parts if not part.function_call]
-                
+
                 if new_parts:
                     # Create new Content with remaining parts (e.g. text)
                     cleaned_history.append(types.Content(role=content.role, parts=new_parts))
@@ -236,9 +239,9 @@ class GenericGemini(GenericLLM):
             else:
                 # No function calls or responses, keep as is
                 cleaned_history.append(content)
-                
+
         return cleaned_history
-        
+
     @staticmethod
     def _build_response(response: GenerateContentResponse, history: List[types.Content]) -> GeminiChatResponse:
         """
@@ -260,19 +263,13 @@ class GenericGemini(GenericLLM):
                 prompt_token_count=response.usage_metadata.prompt_token_count,
                 total_token_count=response.usage_metadata.total_token_count,
                 thoughts_token_count=response.usage_metadata.thoughts_token_count,
-                tool_use_prompt_token_count=response.usage_metadata.tool_use_prompt_token_count
+                tool_use_prompt_token_count=response.usage_metadata.tool_use_prompt_token_count,
             )
         else:
             response_tokens = GeminiTokens()
 
-        response_message = GeminiMessageResponse(
-            text=text_response,
-            tokens=response_tokens
-        )
+        response_message = GeminiMessageResponse(text=text_response, tokens=response_tokens)
 
-        gemini_response = GeminiChatResponse(
-            last_response=response_message,
-            history=history
-        )
-    
+        gemini_response = GeminiChatResponse(last_response=response_message, history=history)
+
         return gemini_response
