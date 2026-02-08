@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional
-from google.genai import types
+from generic_llm_lib.llm_core.messages.models import BaseMessage
 
 
 class GeminiTokens(BaseModel):
@@ -41,8 +41,8 @@ class GeminiChatResponse(BaseModel):
 
     Attributes:
         last_response: The last message response in the chat session.
-        history: The chat history, represented as a list of Content objects.
+        history: The chat history, represented as a list of BaseMessage objects.
     """
 
     last_response: GeminiMessageResponse
-    history: List[types.Content] = Field(default_factory=list)
+    history: List[BaseMessage] = Field(default_factory=list)

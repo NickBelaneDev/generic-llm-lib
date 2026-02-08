@@ -30,7 +30,7 @@ uv add generic-llm-lib
 ### Generic Agent
 
 ```python
-from llm_impl.openai_api import OpenAIToolRegistry, GenericOpenAI
+from generic_llm_lib.llm_impl import OpenAIToolRegistry, GenericOpenAI
 from openai import AsyncOpenAI
 from pydantic import Field
 from typing import Annotated
@@ -40,15 +40,18 @@ import os
 # 1. Create a registry
 registry = OpenAIToolRegistry()
 
+
 # 2. Register tools
-@registry.tool # makes the function a tool
+@registry.tool  # makes the function a tool
 def get_weather(location: Annotated[str, Field(description="The city and state, e.g. San Francisco, CA")]):
     """Get the current weather in a given location"""
     return f"Sunny in {location}"
 
+
 # 3. Initialize
 client = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 llm = GenericOpenAI(client, "gpt-4o", "You are helpful.", registry)
+
 
 # 4. Chat
 async def main():
@@ -56,7 +59,6 @@ async def main():
     print(openai_chat.last_response.text)
     print(openai_chat.last_response.tokens.total_tokens)
     print(openai_chat.history)
-    
 
 
 if __name__ == "__main__":

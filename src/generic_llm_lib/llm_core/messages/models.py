@@ -1,10 +1,11 @@
 from pydantic import BaseModel
 from abc import ABC
+from typing import Optional, List, Any
 
 
 class BaseMessage(ABC, BaseModel):
     author: str
-    content: dict[str, str]
+    content: str
 
 
 class SystemMessage(BaseMessage):
@@ -17,6 +18,7 @@ class UserMessage(BaseMessage):
 
 class AssistantMessage(BaseMessage):
     author: str = "assistant"
+    tool_calls: Optional[List[Any]] = None
 
 
 class ToolMessage(BaseMessage):

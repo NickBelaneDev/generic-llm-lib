@@ -1,5 +1,6 @@
 from typing import List, Any, Optional
 from abc import ABC, abstractmethod
+from generic_llm_lib.llm_core.messages.models import BaseMessage
 
 
 class GenericLLM(ABC):
@@ -9,12 +10,12 @@ class GenericLLM(ABC):
     """
 
     @abstractmethod
-    async def chat(self, history: List[Any], user_prompt: str) -> Any:
+    async def chat(self, history: List[BaseMessage], user_prompt: str) -> Any:
         """
         Conducts a chat turn with the LLM.
 
         Args:
-            history: The conversation history (provider-specific format).
+            history: The conversation history (provider-agnostic format).
             user_prompt: The user's input message.
 
         Returns:

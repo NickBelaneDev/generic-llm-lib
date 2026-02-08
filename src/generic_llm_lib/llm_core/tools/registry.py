@@ -5,10 +5,10 @@ import jsonref  # type: ignore
 from pydantic.fields import FieldInfo
 from pydantic import create_model
 
-from llm_core.tools.models import ToolDefinition
-from llm_core.exceptions.exceptions import ToolRegistrationError, ToolValidationError
-from llm_core.tools.schema_validator import SchemaValidator
-from llm_core.logger import get_logger
+from .models import ToolDefinition
+from ..exceptions.exceptions import ToolRegistrationError, ToolValidationError
+from .schema_validator import SchemaValidator
+from ..logger import get_logger
 import inspect
 
 logger = get_logger(__name__)
@@ -23,6 +23,7 @@ class ToolRegistry(ABC):
     """
 
     def __init__(self) -> None:
+        """Initialize the ToolRegistry."""
         self.tools: Dict[str, ToolDefinition] = {}
 
     def register(
@@ -77,6 +78,19 @@ class ToolRegistry(ABC):
     def _generate_tool_definition(
         func: Callable, name: Optional[str] = None, description: Optional[str] = None
     ) -> ToolDefinition:
+        """Generate a ToolDefinition from a callable function.
+
+        Args:
+            func: The function to generate a definition for.
+            name: Optional name override for the tool.
+            description: Optional description override for the tool.
+
+        Returns:
+            A ToolDefinition object containing the tool's metadata and schema.
+
+        Raises:
+            ToolValidationError: If the function is missing a docstring or parameter descriptions.
+        """
 
         tool_name = name or func.__name__
 
@@ -143,17 +157,32 @@ class ToolRegistry(ABC):
         )
 
     def tool(self, func: Callable) -> Callable:
-        """A decorator to turn a function into an LLM tool."""
+        """A decorator to turn a function into an LLM tool.
+
+        Args:
+            func: The function to decorate.
+
+        Returns:
+            The original function, after registering it as a tool.
+        """
         self.register(func)
         return func
 
     @property
     @abstractmethod
     def tool_object(self) -> Any:
-        """Constructs the final Tool object specific to the LLM provider."""
+        """Constructs the final Tool object specific to the LLM provider.
+
+        Returns:
+            The provider-specific tool representation.
+        """
         pass
 
     @property
     def implementations(self) -> Dict[str, Callable]:
-        """Returns a dictionary mapping function names to their callables."""
+        """Returns a dictionary mapping function names to their callables.
+
+        Returns:
+            A dictionary where keys are tool names and values are the functions.
+        """
         return {name: tool.func for name, tool in self.tools.items()}

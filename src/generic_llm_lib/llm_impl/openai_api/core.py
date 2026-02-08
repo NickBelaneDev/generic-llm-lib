@@ -2,8 +2,9 @@ from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletion, ChatCompletionToolParam
 from typing import List, Tuple, Optional, Any, Dict, Iterable, cast
 import logging
-from llm_core import GenericLLM, ToolRegistry
-from llm_core.tools import ToolExecutionLoop
+from generic_llm_lib.llm_core import GenericLLM, ToolRegistry
+from generic_llm_lib.llm_core import ToolExecutionLoop
+from generic_llm_lib.llm_core.messages.models import BaseMessage, UserMessage, AssistantMessage, SystemMessage
 from .models import OpenAIMessageResponse, OpenAIChatResponse, OpenAITokens
 from .adapter import OpenAIToolAdapter
 
@@ -77,7 +78,7 @@ class GenericOpenAI(GenericLLM):
         return response.last_response
 
     async def chat(
-        self, history: List[Dict[str, Any]], user_prompt: str, clean_history: bool = False
+        self, history: List[BaseMessage], user_prompt: str, clean_history: bool = False
     ) -> OpenAIChatResponse:
         """
         Processes a single turn of a chat conversation, including handling user input,
@@ -87,7 +88,7 @@ class GenericOpenAI(GenericLLM):
         and receive their results within the same turn, up to `max_function_loops` times.
 
         Args:
-            history: A list of message dictionaries representing the conversation history.
+            history: A list of `BaseMessage` objects representing the conversation history.
             user_prompt: The current message from the user.
             clean_history: Removes function calls from the chat history.
 
@@ -99,8 +100,11 @@ class GenericOpenAI(GenericLLM):
         """
         # logger.debug(f"chat() called. History length: {len(history)}, User prompt: {user_prompt}")
 
+        # Convert generic history to OpenAI specific history
+        openai_history = self._convert_history(history)
+
         # Prepare the messages list. If history is empty, add system instruction first.
-        messages = list(history)
+        messages = list(openai_history)
         if not messages and self.sys_instruction:
             messages.append({"role": "system", "content": self.sys_instruction})
 
@@ -139,12 +143,42 @@ class GenericOpenAI(GenericLLM):
 
         messages, final_response = await self._handle_function_calls(messages, response, tools)
 
+        # Ensure the final response is added to the history if it has content
+        if final_response.choices and final_response.choices[0].message.content:
+            # Check if the last message in history is already this response (to avoid duplicates if logic changes)
+            # The tool loop does NOT record the final response, so we must add it here.
+            last_msg = final_response.choices[0].message.model_dump()
+            # Only add if not already present (simple check)
+            if not messages or messages[-1] != last_msg:
+                messages.append(last_msg)
+
         # Clean history to remove intermediate tool calls and outputs to save tokens
         if clean_history:
             logger.debug("Cleaning chat history (removing intermediate tool calls).")
             messages = self._clean_history(messages)
 
         return self._build_response(final_response, messages)
+
+    def _convert_history(self, history: List[BaseMessage]) -> List[Dict[str, Any]]:
+        """
+        Converts generic BaseMessage history to OpenAI specific dictionary history.
+
+        Args:
+            history: List of BaseMessage objects.
+
+        Returns:
+            List of OpenAI message dictionaries.
+        """
+        openai_history = []
+        for msg in history:
+            if isinstance(msg, UserMessage):
+                openai_history.append({"role": "user", "content": msg.content})
+            elif isinstance(msg, AssistantMessage):
+                openai_history.append({"role": "assistant", "content": msg.content})
+            elif isinstance(msg, SystemMessage):
+                openai_history.append({"role": "system", "content": msg.content})
+            # Tool messages handling would be more complex
+        return openai_history
 
     async def _handle_function_calls(
         self,
@@ -189,9 +223,15 @@ class GenericOpenAI(GenericLLM):
 
     @staticmethod
     def _clean_history(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """
-        Removes intermediate tool calls and outputs from the history to save tokens.
+        """Removes intermediate tool calls and outputs from the history to save tokens.
+
         Keeps user messages, system instructions, and assistant messages that have content.
+
+        Args:
+            messages: The list of messages to clean.
+
+        Returns:
+            A list of cleaned messages.
         """
         # logger.debug(f"Cleaning history. Original size: {len(messages)}")
         cleaned_messages = []
@@ -248,10 +288,50 @@ class GenericOpenAI(GenericLLM):
 
         response_message = OpenAIMessageResponse(text=message_content, tokens=response_tokens)
 
-        openai_response = OpenAIChatResponse(last_response=response_message, history=history)
+        # Convert OpenAI history back to generic BaseMessage history
+        generic_history = GenericOpenAI._convert_to_generic_history(history)
+
+        openai_response = OpenAIChatResponse(last_response=response_message, history=generic_history)
 
         return openai_response
 
     @staticmethod
+    def _convert_to_generic_history(history: List[Dict[str, Any]]) -> List[BaseMessage]:
+        """
+        Converts OpenAI specific dictionary history to generic BaseMessage history.
+
+        Args:
+            history: List of OpenAI message dictionaries.
+
+        Returns:
+            List of BaseMessage objects.
+        """
+        generic_history: List[BaseMessage] = []
+        for msg in history:
+            role = msg.get("role")
+            content = msg.get("content")
+
+            if not content:
+                continue
+
+            if role == "user":
+                generic_history.append(UserMessage(content=content))
+            elif role == "assistant":
+                generic_history.append(AssistantMessage(content=content))
+            elif role == "system":
+                generic_history.append(SystemMessage(content=content))
+            # Handle other roles if necessary
+        return generic_history
+
+    @staticmethod
     def _format_argument_error(tool_name: str, error: Exception) -> str:
+        """Format an error message when tool argument decoding fails.
+
+        Args:
+            tool_name: The name of the tool that failed.
+            error: The exception that occurred.
+
+        Returns:
+            A formatted error string.
+        """
         return f"Failed to decode function arguments: {error}"

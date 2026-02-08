@@ -46,16 +46,18 @@ Defines Pydantic models for structured Gemini responses.
 ```python
 import asyncio
 from google import genai
-from src.llm_impl.gemini import GenericGemini, GeminiToolRegistry
+from generic_llm_lib.llm_impl.gemini import GenericGemini, GeminiToolRegistry
 
 # 1. Setup Registry and Tools
 registry = GeminiToolRegistry()
+
 
 @registry.tool
 def get_current_time(timezone: str = "UTC"):
     """Returns the current time in the specified timezone."""
     from datetime import datetime
     return f"The time is {datetime.now()} in {timezone}"
+
 
 # 2. Initialize Client and Wrapper
 client = genai.Client(api_key="your-api-key")
@@ -65,6 +67,7 @@ llm = GenericGemini(
     sys_instruction="You are a helpful assistant.",
     registry=registry
 )
+
 
 # 3. Run Chat
 async def main():
@@ -76,11 +79,12 @@ async def main():
     history = []
     chat_response = await llm.chat(history, "My name is Alice.")
     print(chat_response.last_response.text)
-    
+
     # History is updated automatically in the response object
     history = chat_response.history
     chat_response = await llm.chat(history, "What is my name?")
     print(chat_response.last_response.text)
+
 
 if __name__ == "__main__":
     asyncio.run(main())

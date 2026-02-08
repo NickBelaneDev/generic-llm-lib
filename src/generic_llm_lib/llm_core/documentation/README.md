@@ -12,7 +12,7 @@ Defines the core interface for LLM interactions.
 The primary abstract base class that all LLM provider implementations must inherit from.
 
 *   **Methods:**
-    *   `chat(history: List[Any], user_prompt: str) -> Any`: Conducts a multi-turn chat conversation. It takes a provider-specific history and a user prompt, returning a response object.
+    *   `chat(history: List[BaseMessage], user_prompt: str) -> Any`: Conducts a multi-turn chat conversation. It takes a provider-agnostic history (List of `BaseMessage`) and a user prompt, returning a response object.
     *   `ask(prompt: str, model: str = None) -> Any`: Performs a single-turn question/answer interaction without maintaining history.
 
 ### 2. `registry.py`
@@ -70,7 +70,7 @@ Tools require type hints with `Annotated` and `Field` descriptions to generate p
 ```python
 from typing import Annotated
 from pydantic import Field
-from llm_core.tools.registry import ToolRegistry
+from generic_llm_lib.llm_core import ToolRegistry
 
 # Assuming a concrete implementation of ToolRegistry exists
 registry = MyProviderRegistry()
@@ -90,7 +90,7 @@ def get_weather(
 To add a new LLM provider, subclass `GenericLLM` and implement the abstract methods.
 
 ```python
-from llm_core.models.base import GenericLLM
+from generic_llm_lib.llm_core import GenericLLM
 
 
 class MyLLM(GenericLLM):
@@ -102,4 +102,3 @@ class MyLLM(GenericLLM):
         # Implementation specific to the provider
         pass
 ```
-

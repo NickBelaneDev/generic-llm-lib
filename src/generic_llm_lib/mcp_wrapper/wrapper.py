@@ -7,8 +7,8 @@ from mcp import ClientSession
 from mcp.client.stdio import stdio_client, StdioServerParameters
 from mcp.types import Tool as MCPTool, TextContent, ImageContent, EmbeddedResource
 
-from llm_core.tools.registry import ToolRegistry
-from llm_core.tools.schema_validator import SchemaValidator
+from generic_llm_lib.llm_core import ToolRegistry
+from generic_llm_lib.llm_core import SchemaValidator
 
 logger = logging.getLogger(__name__)
 

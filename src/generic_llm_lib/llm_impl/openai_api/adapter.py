@@ -2,7 +2,7 @@ from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletion, ChatCompletionToolParam
 from typing import List, Optional, Any, Dict, Sequence, Iterable, cast
 import json
-from llm_core.tools import ToolCallRequest, ToolCallResult, ToolAdapter
+from generic_llm_lib.llm_core import ToolCallRequest, ToolCallResult, ToolAdapter
 
 
 class OpenAIToolAdapter(ToolAdapter):
@@ -17,6 +17,16 @@ class OpenAIToolAdapter(ToolAdapter):
         temperature: float,
         max_tokens: int,
     ):
+        """Initialize the OpenAI tool adapter.
+
+        Args:
+            client: The OpenAI client instance.
+            model: The name of the model to use.
+            messages: The conversation history.
+            tools: Optional list of tool definitions.
+            temperature: Sampling temperature.
+            max_tokens: Maximum number of tokens to generate.
+        """
         self.client = client
         self.model = model
         self.messages = messages
@@ -25,6 +35,14 @@ class OpenAIToolAdapter(ToolAdapter):
         self.max_tokens = max_tokens
 
     def get_tool_calls(self, response: ChatCompletion) -> Sequence[ToolCallRequest]:
+        """Extract tool calls from an OpenAI chat completion response.
+
+        Args:
+            response: The chat completion response from OpenAI.
+
+        Returns:
+            A sequence of tool call requests extracted from the response.
+        """
         if not response.choices:
             return []
 
@@ -46,9 +64,22 @@ class OpenAIToolAdapter(ToolAdapter):
         return requests
 
     def record_assistant_message(self, response: ChatCompletion) -> None:
+        """Record the assistant's message from the response into the message history.
+
+        Args:
+            response: The chat completion response containing the assistant's message.
+        """
         self.messages.append(response.choices[0].message.model_dump())
 
     def build_tool_response_message(self, result: ToolCallResult) -> Dict[str, Any]:
+        """Build a tool response message for the OpenAI API.
+
+        Args:
+            result: The result of a tool call.
+
+        Returns:
+            A dictionary representing the tool response message.
+        """
         return {
             "role": "tool",
             "tool_call_id": result.call_id,
@@ -57,6 +88,14 @@ class OpenAIToolAdapter(ToolAdapter):
         }
 
     async def send_tool_responses(self, tool_messages: Sequence[Dict[str, Any]]) -> ChatCompletion:
+        """Send tool responses back to the OpenAI API and get a new completion.
+
+        Args:
+            tool_messages: A sequence of tool response messages.
+
+        Returns:
+            The next chat completion response from OpenAI.
+        """
         self.messages.extend(tool_messages)
         # Cast tools to the expected type. The library expects Iterable[ChatCompletionToolParam] | None
         # Our internal representation is List[Dict[str, Any]] which is compatible structurally.
