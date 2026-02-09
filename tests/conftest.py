@@ -55,6 +55,7 @@ def vcr_config() -> dict[str, Any]:
     return {
         "cassette_library_dir": "tests/cassettes",
         "record_mode": os.getenv("VCR_RECORD_MODE", "once"),
+        "match_on": ["method", "path", "query"],
         "filter_headers": [
             "authorization",
             "openai-organization",
