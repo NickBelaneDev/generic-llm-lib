@@ -26,7 +26,7 @@ async def main() -> None:
     client = AsyncOpenAI(api_key=api_key)
     llm = GenericOpenAI(
         client=client,
-        model_name="gpt-3.5-turbo",
+        model_name="gpt-5-turbo",
         sys_instruction="You are a helpful assistant.",
     )
     print("Using OpenAI.")

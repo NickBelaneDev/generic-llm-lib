@@ -59,13 +59,32 @@ class GeminiToolRegistry(ToolRegistry):
             # If it's already a types.Schema (or similar), it's passed through.
 
             if tool.parameters:
+                # Gemini does not support 'additionalProperties' in the schema
+                clean_params = self._strip_additional_properties(tool.parameters)
                 declarations.append(
-                    types.FunctionDeclaration(name=tool.name, description=tool.description, parameters=tool.parameters)
+                    types.FunctionDeclaration(name=tool.name, description=tool.description, parameters=clean_params)
                 )
             else:
                 declarations.append(types.FunctionDeclaration(name=tool.name, description=tool.description))
 
         return types.Tool(function_declarations=declarations)
+
+    def _strip_additional_properties(self, schema: Any) -> Any:
+        """Recursively removes 'additionalProperties' from the schema."""
+        if not isinstance(schema, dict):
+            return schema
+
+        new_schema = schema.copy()
+        new_schema.pop("additionalProperties", None)
+
+        for key, value in new_schema.items():
+            if isinstance(value, dict):
+                new_schema[key] = self._strip_additional_properties(value)
+            elif isinstance(value, list):
+                new_schema[key] = [
+                    self._strip_additional_properties(item) if isinstance(item, dict) else item for item in value
+                ]
+        return new_schema
 
     @property
     def implementations(self) -> Dict[str, Callable]:

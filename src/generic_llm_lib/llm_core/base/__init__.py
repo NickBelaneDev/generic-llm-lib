@@ -1,5 +1,6 @@
-from .base import GenericLLM
+from .base import GenericLLM, ChatResult
 
 __all__ = [
     "GenericLLM",
+    "ChatResult",
 ]
