@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-02-01
+
+### Added
+- **Unified Imports**: Simplified library usage by exposing core classes (`GenericLLM`, `ChatResult`, `GenericGemini`, `GenericOpenAI`, etc.) directly from the top-level `generic_llm_lib` package.
+- **Project Structure**: Adopted a clean `src`-layout for better packaging and testing isolation.
+- **Type Safety**: Enforced strict type checking (`mypy`) across the entire codebase, including `disallow_untyped_defs = true`.
+- **Testing**: Added `pytest-recording` (VCR.py) for deterministic and fast integration tests using cassettes.
+
+### Changed
+- **Refactoring**: Massive cleanup of internal package structure (`llm_core`, `llm_impl`) to follow the Dependency Inversion Principle more strictly.
+- **Dependencies**: Switched to `uv` for modern, fast dependency management.
+- **Documentation**: Updated `README.md` and `CONTRIBUTING.md` (implied) to reflect the new structure and usage patterns.
+
+### Fixed
+- **Imports**: Resolved circular import issues and exposed missing classes in `__init__.py` files.
+- **DX**: Improved Developer Experience by reducing import depth and clarifying public APIs.
+
 ## [0.3.1] - 2026-01-31
 
 ### Changed

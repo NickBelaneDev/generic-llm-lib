@@ -1,0 +1,135 @@
+interactions:
+- request:
+    body: '{"contents": [{"parts": [{"text": "What time is it?"}], "role": "user"}],
+      "systemInstruction": {"parts": [{"text": "You are a helpful assistant."}], "role":
+      "user"}, "tools": [{"functionDeclarations": [{"description": "Get the current
+      time.", "name": "get_current_time", "parameters": {"properties": {}, "type":
+      "OBJECT"}}]}], "generationConfig": {"temperature": 1.0, "maxOutputTokens": 3000}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '393'
+      Content-Type:
+      - application/json
+      Host:
+      - generativelanguage.googleapis.com
+      user-agent:
+      - google-genai-sdk/1.60.0 gl-python/3.11.14
+      x-goog-api-client:
+      - google-genai-sdk/1.60.0 gl-python/3.11.14
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"functionCall\": {\n              \"name\": \"get_current_time\",\n
+        \             \"args\": {}\n            },\n            \"thoughtSignature\":
+        \"CskBAb4+9vvsJaSBF/jJhSoilj6we71Z5vbb4ecPV77XtIfu06OpEYERSWBk/JFpIH5WVVdSV1/w0ielMeMeypQHHjbdFq7bk5WUOoNNJ9Nx0hkhapoEtqxi/x8JSsdbRTh/u2j64nVAo5H98prFABc02eoeg+PyvouTLIaGQAq/10dLp3kWUvwSLclQux9M7QP9XilB/F248IuTD8FIQx2LzqQqBwR6MkUae9cyyC/GsTx+DRZ+33u6QcOAn4G2PBIxXtIQxIRHOJFf\"\n
+        \         }\n        ],\n        \"role\": \"model\"\n      },\n      \"finishReason\":
+        \"STOP\",\n      \"index\": 0,\n      \"finishMessage\": \"Model generated
+        function call(s).\"\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
+        41,\n    \"candidatesTokenCount\": 12,\n    \"totalTokenCount\": 91,\n    \"promptTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 41\n
+        \     }\n    ],\n    \"thoughtsTokenCount\": 38\n  },\n  \"modelVersion\":
+        \"gemini-2.5-flash\",\n  \"responseId\": \"QCWKae2hJ_7xxN8PyrOo4A4\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Mon, 09 Feb 2026 18:19:44 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=655
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-XSS-Protection:
+      - '0'
+      content-length:
+      - '998'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"contents": [{"parts": [{"text": "What time is it?"}], "role": "user"},
+      {"parts": [{"functionCall": {"args": {}, "name": "get_current_time"}, "thoughtSignature":
+      "CskBAb4-9vvsJaSBF_jJhSoilj6we71Z5vbb4ecPV77XtIfu06OpEYERSWBk_JFpIH5WVVdSV1_w0ielMeMeypQHHjbdFq7bk5WUOoNNJ9Nx0hkhapoEtqxi_x8JSsdbRTh_u2j64nVAo5H98prFABc02eoeg-PyvouTLIaGQAq_10dLp3kWUvwSLclQux9M7QP9XilB_F248IuTD8FIQx2LzqQqBwR6MkUae9cyyC_GsTx-DRZ-33u6QcOAn4G2PBIxXtIQxIRHOJFf"}],
+      "role": "model"}, {"parts": [{"functionResponse": {"name": "get_current_time",
+      "response": {"result": "It is 12:00 PM."}}}], "role": "user"}], "systemInstruction":
+      {"parts": [{"text": "You are a helpful assistant."}], "role": "user"}, "tools":
+      [{"functionDeclarations": [{"description": "Get the current time.", "name":
+      "get_current_time", "parameters": {"properties": {}, "type": "OBJECT"}}]}],
+      "generationConfig": {"temperature": 1.0, "maxOutputTokens": 3000}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '903'
+      Content-Type:
+      - application/json
+      Host:
+      - generativelanguage.googleapis.com
+      user-agent:
+      - google-genai-sdk/1.60.0 gl-python/3.11.14
+      x-goog-api-client:
+      - google-genai-sdk/1.60.0 gl-python/3.11.14
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"text\": \"It is 12:00 PM.\"\n          }\n        ],\n
+        \       \"role\": \"model\"\n      },\n      \"finishReason\": \"STOP\",\n
+        \     \"index\": 0\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
+        79,\n    \"candidatesTokenCount\": 10,\n    \"totalTokenCount\": 89,\n    \"promptTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 79\n
+        \     }\n    ]\n  },\n  \"modelVersion\": \"gemini-2.5-flash\",\n  \"responseId\":
+        \"QSWKaYWhEdTAxN8P6OGXkQ0\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Mon, 09 Feb 2026 18:19:45 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=546
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-XSS-Protection:
+      - '0'
+      content-length:
+      - '527'
+    status:
+      code: 200
+      message: OK
+version: 1

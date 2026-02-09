@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "generic-llm-lib"
-version = "0.3.1"
+version = "0.4.0"
 description = "A flexible, async-first agent library for LLM providers (Google Gemini, etc.) designed for scalable chatbots and server-side applications."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -28,8 +28,10 @@ dependencies = [
 dev = [
     "black>=24.0",
     "mypy>=1.0",
+    "python-dotenv>=1.0.0",
     "pytest>=8.0",
     "pytest-asyncio>=0.24.0",
+    "pytest-recording>=0.13.0",
     "ruff>=0.1.0",
 ]
 

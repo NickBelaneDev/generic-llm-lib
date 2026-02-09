@@ -1,0 +1,152 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"system","content":"You are a helpful assistant."},{"role":"user","content":"What
+      is the weather in Berlin?"}],"model":"openai/gpt-oss-20b","max_tokens":3000,"temperature":1.0,"tools":[{"type":"function","function":{"name":"get_weather","description":"Get
+      the weather for a location.","parameters":{"properties":{"location":{"description":"The
+      location to get the weather for.","type":"string"}},"required":["location"],"type":"object","additionalProperties":false}}}]}'
+    headers:
+      Accept:
+      - application/json
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '490'
+      Content-Type:
+      - application/json
+      Host:
+      - 192.168.178.97:1234
+      User-Agent:
+      - AsyncOpenAI/Python 2.16.0
+      X-Stainless-Arch:
+      - other:amd64
+      X-Stainless-Async:
+      - async:asyncio
+      X-Stainless-Lang:
+      - python
+      X-Stainless-OS:
+      - Windows
+      X-Stainless-Package-Version:
+      - 2.16.0
+      X-Stainless-Runtime:
+      - CPython
+      X-Stainless-Runtime-Version:
+      - 3.11.14
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+    method: POST
+    uri: http://192.168.178.97:1234/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-wr0d6598hjenvutymvcsg\",\n  \"object\": \"chat.completion\",\n
+        \ \"created\": 1770661187,\n  \"model\": \"openai/gpt-oss-20b\",\n  \"choices\":
+        [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n
+        \       \"content\": \"\",\n        \"reasoning\": \"Need to call get_weather.\",\n
+        \       \"tool_calls\": [\n          {\n            \"type\": \"function\",\n
+        \           \"id\": \"313056175\",\n            \"function\": {\n              \"name\":
+        \"get_weather\",\n              \"arguments\": \"{\\\"location\\\":\\\"Berlin\\\"}\"\n
+        \           }\n          }\n        ]\n      },\n      \"logprobs\": null,\n
+        \     \"finish_reason\": \"tool_calls\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        144,\n    \"completion_tokens\": 30,\n    \"total_tokens\": 174\n  },\n  \"stats\":
+        {},\n  \"system_fingerprint\": \"openai/gpt-oss-20b\"\n}"
+    headers:
+      Access-Control-Allow-Headers:
+      - '*'
+      Access-Control-Allow-Origin:
+      - '*'
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '784'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Mon, 09 Feb 2026 18:19:48 GMT
+      ETag:
+      - W/"310-2K2rKcNCdGuquspA/IfPfl95Z0M"
+      Keep-Alive:
+      - timeout=5
+      X-Powered-By:
+      - Express
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are a helpful assistant."},{"role":"user","content":"What
+      is the weather in Berlin?"},{"content":"","refusal":null,"role":"assistant","annotations":null,"audio":null,"function_call":null,"tool_calls":[{"id":"313056175","function":{"arguments":"{\"location\":\"Berlin\"}","name":"get_weather"},"type":"function"}],"reasoning":"Need
+      to call get_weather."},{"role":"tool","tool_call_id":"313056175","name":"get_weather","content":"{\"result\":
+      \"The weather in Berlin is sunny.\"}"}],"model":"openai/gpt-oss-20b","max_tokens":3000,"temperature":1.0,"tools":[{"type":"function","function":{"name":"get_weather","description":"Get
+      the weather for a location.","parameters":{"properties":{"location":{"description":"The
+      location to get the weather for.","type":"string"}},"required":["location"],"type":"object","additionalProperties":false}}}]}'
+    headers:
+      Accept:
+      - application/json
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '884'
+      Content-Type:
+      - application/json
+      Host:
+      - 192.168.178.97:1234
+      User-Agent:
+      - AsyncOpenAI/Python 2.16.0
+      X-Stainless-Arch:
+      - other:amd64
+      X-Stainless-Async:
+      - async:asyncio
+      X-Stainless-Lang:
+      - python
+      X-Stainless-OS:
+      - Windows
+      X-Stainless-Package-Version:
+      - 2.16.0
+      X-Stainless-Runtime:
+      - CPython
+      X-Stainless-Runtime-Version:
+      - 3.11.14
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+    method: POST
+    uri: http://192.168.178.97:1234/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-5mhuqevgyx59e3lhagjvj8\",\n  \"object\": \"chat.completion\",\n
+        \ \"created\": 1770661188,\n  \"model\": \"openai/gpt-oss-20b\",\n  \"choices\":
+        [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n
+        \       \"content\": \"The weather in Berlin is sunny.\",\n        \"reasoning\":
+        \"We just got answer. Provide.\",\n        \"tool_calls\": []\n      },\n
+        \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
+        \ \"usage\": {\n    \"prompt_tokens\": 186,\n    \"completion_tokens\": 24,\n
+        \   \"total_tokens\": 210\n  },\n  \"stats\": {},\n  \"system_fingerprint\":
+        \"openai/gpt-oss-20b\"\n}"
+    headers:
+      Access-Control-Allow-Headers:
+      - '*'
+      Access-Control-Allow-Origin:
+      - '*'
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '585'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Mon, 09 Feb 2026 18:19:49 GMT
+      ETag:
+      - W/"249-Iyxgx5zxyZUedxjLtz7CdoA9CEs"
+      Keep-Alive:
+      - timeout=5
+      X-Powered-By:
+      - Express
+    status:
+      code: 200
+      message: OK
+version: 1

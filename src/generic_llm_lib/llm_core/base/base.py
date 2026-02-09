@@ -1,16 +1,25 @@
-from typing import List, Any, Optional
+from typing import List, Optional, TypeVar, Generic
 from abc import ABC, abstractmethod
 from generic_llm_lib.llm_core.messages.models import BaseMessage
+from pydantic import BaseModel
+
+ProviderResT = TypeVar("ProviderResT")
 
 
-class GenericLLM(ABC):
+class ChatResult(BaseModel, Generic[ProviderResT]):
+    content: str
+    history: List[BaseMessage]
+    raw: ProviderResT
+
+
+class GenericLLM(ABC, Generic[ProviderResT]):
     """
     Abstract Base Class for Generic LLM implementations.
     Defines the standard interface for chatting and asking questions.
     """
 
     @abstractmethod
-    async def chat(self, history: List[BaseMessage], user_prompt: str) -> Any:
+    async def chat(self, history: List[BaseMessage], user_prompt: str) -> ChatResult[ProviderResT]:
         """
         Conducts a chat turn with the LLM.
 
@@ -25,7 +34,7 @@ class GenericLLM(ABC):
         pass
 
     @abstractmethod
-    async def ask(self, prompt: str, model: Optional[str] = None) -> Any:
+    async def ask(self, prompt: str, model: Optional[str] = None) -> ChatResult[ProviderResT]:
         """
         Single-turn question without maintaining history.
 

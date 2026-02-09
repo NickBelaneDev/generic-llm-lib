@@ -1,0 +1,71 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"system","content":"You are a helper."},{"role":"user","content":"Hello"}],"model":"openai/gpt-oss-20b","max_tokens":3000,"temperature":1.0,"tools":null}'
+    headers:
+      Accept:
+      - application/json
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '174'
+      Content-Type:
+      - application/json
+      Host:
+      - 192.168.178.97:1234
+      User-Agent:
+      - AsyncOpenAI/Python 2.16.0
+      X-Stainless-Arch:
+      - other:amd64
+      X-Stainless-Async:
+      - async:asyncio
+      X-Stainless-Lang:
+      - python
+      X-Stainless-OS:
+      - Windows
+      X-Stainless-Package-Version:
+      - 2.16.0
+      X-Stainless-Runtime:
+      - CPython
+      X-Stainless-Runtime-Version:
+      - 3.11.14
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+    method: POST
+    uri: http://192.168.178.97:1234/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-e2a4ni9ukmpdwyp8psb9xu\",\n  \"object\": \"chat.completion\",\n
+        \ \"created\": 1770661186,\n  \"model\": \"openai/gpt-oss-20b\",\n  \"choices\":
+        [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n
+        \       \"content\": \"Hello! How can I help you today?\",\n        \"reasoning\":
+        \"Just greet.\",\n        \"tool_calls\": []\n      },\n      \"logprobs\":
+        null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        80,\n    \"completion_tokens\": 22,\n    \"total_tokens\": 102\n  },\n  \"stats\":
+        {},\n  \"system_fingerprint\": \"openai/gpt-oss-20b\"\n}"
+    headers:
+      Access-Control-Allow-Headers:
+      - '*'
+      Access-Control-Allow-Origin:
+      - '*'
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '568'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Mon, 09 Feb 2026 18:19:47 GMT
+      ETag:
+      - W/"238-hADeHXGOhDegkQ7BF0i3NuDyRGw"
+      Keep-Alive:
+      - timeout=5
+      X-Powered-By:
+      - Express
+    status:
+      code: 200
+      message: OK
+version: 1

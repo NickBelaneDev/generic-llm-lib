@@ -5,13 +5,13 @@ import logging
 from generic_llm_lib.llm_core import GenericLLM, ToolRegistry
 from generic_llm_lib.llm_core import ToolExecutionLoop
 from generic_llm_lib.llm_core.messages.models import BaseMessage, UserMessage, AssistantMessage, SystemMessage
-from .models import OpenAIMessageResponse, OpenAIChatResponse, OpenAITokens
+from generic_llm_lib.llm_core.base.base import ChatResult
 from .adapter import OpenAIToolAdapter
 
 logger = logging.getLogger(__name__)
 
 
-class GenericOpenAI(GenericLLM):
+class GenericOpenAI(GenericLLM[ChatCompletion]):
     """
     Implementation of GenericLLM for OpenAI's models.
     Handles chat sessions and automatic function calling loops.
@@ -58,7 +58,7 @@ class GenericOpenAI(GenericLLM):
             argument_error_formatter=self._format_argument_error,
         )
 
-    async def ask(self, prompt: str, model: Optional[str] = None) -> OpenAIMessageResponse:
+    async def ask(self, prompt: str, model: Optional[str] = None) -> ChatResult[ChatCompletion]:
         """
         Generates a text response from the LLM based on a single prompt.
         This method handles potential function calls internally by initiating a temporary chat session.
@@ -68,18 +68,16 @@ class GenericOpenAI(GenericLLM):
             model: Optional. Overrides the default model for this specific request.
 
         Returns:
-            OpenAIMessageResponse: The generated text response from the LLM.
+            ChatResult[ChatCompletion]: The generated text response from the LLM.
         """
         # We use a temporary chat session to handle the tool execution loop (Model -> Tool -> Model)
         # We start with an empty history.
         # logger.debug(f"ask() called with prompt: {prompt}")
-        response: OpenAIChatResponse = await self.chat([], prompt)
-
-        return response.last_response
+        return await self.chat([], prompt)
 
     async def chat(
         self, history: List[BaseMessage], user_prompt: str, clean_history: bool = False
-    ) -> OpenAIChatResponse:
+    ) -> ChatResult[ChatCompletion]:
         """
         Processes a single turn of a chat conversation, including handling user input,
         generating LLM responses, and executing any requested function calls.
@@ -93,10 +91,11 @@ class GenericOpenAI(GenericLLM):
             clean_history: Removes function calls from the chat history.
 
         Returns:
-            OpenAIChatResponse: An object containing:
+            ChatResult[ChatCompletion]: An object containing:
             - The final text response from the LLM after all function calls (if any) are resolved.
             - The updated conversation history, including the user's prompt, LLM's responses,
               and any tool calls/responses.
+            - The raw ChatCompletion object.
         """
         # logger.debug(f"chat() called. History length: {len(history)}, User prompt: {user_prompt}")
 
@@ -159,7 +158,8 @@ class GenericOpenAI(GenericLLM):
 
         return self._build_response(final_response, messages)
 
-    def _convert_history(self, history: List[BaseMessage]) -> List[Dict[str, Any]]:
+    @staticmethod
+    def _convert_history(history: List[BaseMessage]) -> List[Dict[str, Any]]:
         """
         Converts generic BaseMessage history to OpenAI specific dictionary history.
 
@@ -201,18 +201,11 @@ class GenericOpenAI(GenericLLM):
         if not initial_response.choices:
             return messages, initial_response
 
-        # Convert Iterable[ChatCompletionToolParam] back to List[Dict[str, Any]] for the adapter if needed,
-        # or update adapter to accept Iterable. For now, we assume it's a list or cast it.
-        # We cast tools to Iterable[Dict[str, Any]] to satisfy the list constructor if needed, or just use list()
-        # The error was: Argument 1 to "list" has incompatible type "Iterable[ChatCompletionFunctionToolParam]"; expected "Iterable[dict[str, Any]]"
-        # ChatCompletionFunctionToolParam is a TypedDict, which is compatible with dict at runtime but mypy is strict.
-        tools_list: Optional[List[Dict[str, Any]]] = list(cast(Iterable[Dict[str, Any]], tools)) if tools else None
-
         adapter = OpenAIToolAdapter(
             client=self.client,
             model=self.model,
             messages=messages,
-            tools=tools_list,
+            tools=tools,
             temperature=self.temperature,
             max_tokens=self.max_tokens,
         )
@@ -260,40 +253,26 @@ class GenericOpenAI(GenericLLM):
         return cleaned_messages
 
     @staticmethod
-    def _build_response(response: ChatCompletion, history: List[Dict[str, Any]]) -> OpenAIChatResponse:
+    def _build_response(response: ChatCompletion, history: List[Dict[str, Any]]) -> ChatResult[ChatCompletion]:
         """
-        Constructs the final OpenAIChatResponse object from the raw API response and chat history.
+        Constructs the final ChatResult object from the raw API response and chat history.
 
         Args:
             response: The final ChatCompletion from the model.
             history: The chat history list.
 
         Returns:
-            OpenAIChatResponse: The structured response containing text, tokens, and history.
+            ChatResult[ChatCompletion]: The structured response containing text, history, and raw response.
         """
         if response.choices:
             message_content = response.choices[0].message.content or ""
         else:
             message_content = ""
 
-        usage = response.usage
-        if usage:
-            response_tokens = OpenAITokens(
-                prompt_tokens=usage.prompt_tokens,
-                completion_tokens=usage.completion_tokens,
-                total_tokens=usage.total_tokens,
-            )
-        else:
-            response_tokens = OpenAITokens()
-
-        response_message = OpenAIMessageResponse(text=message_content, tokens=response_tokens)
-
         # Convert OpenAI history back to generic BaseMessage history
         generic_history = GenericOpenAI._convert_to_generic_history(history)
 
-        openai_response = OpenAIChatResponse(last_response=response_message, history=generic_history)
-
-        return openai_response
+        return ChatResult(content=message_content, history=generic_history, raw=response)
 
     @staticmethod
     def _convert_to_generic_history(history: List[Dict[str, Any]]) -> List[BaseMessage]:

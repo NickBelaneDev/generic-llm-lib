@@ -62,8 +62,8 @@ def get_current_time(timezone: str = "UTC"):
 # 2. Initialize Client and Wrapper
 client = genai.Client(api_key="your-api-key")
 llm = GenericGemini(
-    client=client,
-    model_name="gemini-1.5-flash",
+    aclient=client,
+    model_name="gemini-2.5-flash",
     sys_instruction="You are a helpful assistant.",
     registry=registry
 )

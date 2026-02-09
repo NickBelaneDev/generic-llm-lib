@@ -13,7 +13,7 @@ class OpenAIToolAdapter(ToolAdapter):
         client: AsyncOpenAI,
         model: str,
         messages: List[Dict[str, Any]],
-        tools: Optional[List[Dict[str, Any]]],
+        tools: Optional[Iterable[ChatCompletionToolParam]],
         temperature: float,
         max_tokens: int,
     ):
@@ -97,17 +97,13 @@ class OpenAIToolAdapter(ToolAdapter):
             The next chat completion response from OpenAI.
         """
         self.messages.extend(tool_messages)
-        # Cast tools to the expected type. The library expects Iterable[ChatCompletionToolParam] | None
-        # Our internal representation is List[Dict[str, Any]] which is compatible structurally.
-        # We use Any to bypass the strict union check if needed, or cast to the specific union member
-        tools_param = cast(Optional[Iterable[ChatCompletionToolParam]], self.tools)
 
         # We need to cast messages to Iterable[Any] because the library expects a specific union of message types
         # but we are using List[Dict[str, Any]] which is structurally compatible.
         return await self.client.chat.completions.create(
             model=self.model,
             messages=cast(Iterable[Any], self.messages),
-            tools=tools_param,  # type: ignore
+            tools=self.tools,  # type: ignore[arg-type]
             temperature=self.temperature,
             max_tokens=self.max_tokens,
         )

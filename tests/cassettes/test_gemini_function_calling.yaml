@@ -1,0 +1,139 @@
+interactions:
+- request:
+    body: '{"contents": [{"parts": [{"text": "What is the weather in Berlin?"}], "role":
+      "user"}], "systemInstruction": {"parts": [{"text": "You are a helpful assistant."}],
+      "role": "user"}, "tools": [{"functionDeclarations": [{"description": "Get the
+      weather for a location.", "name": "get_weather", "parameters": {"properties":
+      {"location": {"description": "The location to get the weather for.", "type":
+      "STRING"}}, "required": ["location"], "type": "OBJECT"}}]}], "generationConfig":
+      {"temperature": 1.0, "maxOutputTokens": 3000}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '523'
+      Content-Type:
+      - application/json
+      Host:
+      - generativelanguage.googleapis.com
+      user-agent:
+      - google-genai-sdk/1.60.0 gl-python/3.11.14
+      x-goog-api-client:
+      - google-genai-sdk/1.60.0 gl-python/3.11.14
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"functionCall\": {\n              \"name\": \"get_weather\",\n
+        \             \"args\": {\n                \"location\": \"Berlin\"\n              }\n
+        \           },\n            \"thoughtSignature\": \"CvYBAb4+9vvnHrLDWgkForkASuiZENmtZubXganbnSxPRY+BzjBVAUGnb28JAoxq7O7+7aMM2HrdgO3fvPqAi0NTJLBp+Bv3M3ZN95O8Ijj63zOSFaF/rGlYJvWj5Pwht3Kc75b99ySFMEpXPMim/zx8/gtZkvPlL9RHqPHWkvLu+9kunHc+WUpIEJt9iJ43u3q8y8K1cQB9j+rf8HhjtcbXqgwUrhpk3VE6d9qfb+gJZQemYEmGaXERIzIr4R9XlMSRHVdOCYtYp6b8w+HZjHqNpHLYAM6c+zgkd0wfTkWsdsRzfFJpPqNQnLmIv682XE8FWW7bNETG\"\n
+        \         }\n        ],\n        \"role\": \"model\"\n      },\n      \"finishReason\":
+        \"STOP\",\n      \"index\": 0,\n      \"finishMessage\": \"Model generated
+        function call(s).\"\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
+        61,\n    \"candidatesTokenCount\": 15,\n    \"totalTokenCount\": 125,\n    \"promptTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 61\n
+        \     }\n    ],\n    \"thoughtsTokenCount\": 49\n  },\n  \"modelVersion\":
+        \"gemini-2.5-flash\",\n  \"responseId\": \"PyWKadvaDPz-vdIP5eexgAg\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Mon, 09 Feb 2026 18:19:43 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=996
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-XSS-Protection:
+      - '0'
+      content-length:
+      - '1106'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"contents": [{"parts": [{"text": "What is the weather in Berlin?"}], "role":
+      "user"}, {"parts": [{"functionCall": {"args": {"location": "Berlin"}, "name":
+      "get_weather"}, "thoughtSignature": "CvYBAb4-9vvnHrLDWgkForkASuiZENmtZubXganbnSxPRY-BzjBVAUGnb28JAoxq7O7-7aMM2HrdgO3fvPqAi0NTJLBp-Bv3M3ZN95O8Ijj63zOSFaF_rGlYJvWj5Pwht3Kc75b99ySFMEpXPMim_zx8_gtZkvPlL9RHqPHWkvLu-9kunHc-WUpIEJt9iJ43u3q8y8K1cQB9j-rf8HhjtcbXqgwUrhpk3VE6d9qfb-gJZQemYEmGaXERIzIr4R9XlMSRHVdOCYtYp6b8w-HZjHqNpHLYAM6c-zgkd0wfTkWsdsRzfFJpPqNQnLmIv682XE8FWW7bNETG"}],
+      "role": "model"}, {"parts": [{"functionResponse": {"name": "get_weather", "response":
+      {"result": "The weather in Berlin is sunny."}}}], "role": "user"}], "systemInstruction":
+      {"parts": [{"text": "You are a helpful assistant."}], "role": "user"}, "tools":
+      [{"functionDeclarations": [{"description": "Get the weather for a location.",
+      "name": "get_weather", "parameters": {"properties": {"location": {"description":
+      "The location to get the weather for.", "type": "STRING"}}, "required": ["location"],
+      "type": "OBJECT"}}]}], "generationConfig": {"temperature": 1.0, "maxOutputTokens":
+      3000}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1119'
+      Content-Type:
+      - application/json
+      Host:
+      - generativelanguage.googleapis.com
+      user-agent:
+      - google-genai-sdk/1.60.0 gl-python/3.11.14
+      x-goog-api-client:
+      - google-genai-sdk/1.60.0 gl-python/3.11.14
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"text\": \"The weather in Berlin is sunny.\"\n
+        \         }\n        ],\n        \"role\": \"model\"\n      },\n      \"finishReason\":
+        \"STOP\",\n      \"index\": 0\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
+        97,\n    \"candidatesTokenCount\": 7,\n    \"totalTokenCount\": 104,\n    \"promptTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 97\n
+        \     }\n    ]\n  },\n  \"modelVersion\": \"gemini-2.5-flash\",\n  \"responseId\":
+        \"PyWKaavTNayKvdIPppGYyQk\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Mon, 09 Feb 2026 18:19:43 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=620
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-XSS-Protection:
+      - '0'
+      content-length:
+      - '543'
+    status:
+      code: 200
+      message: OK
+version: 1
