@@ -54,9 +54,6 @@ class GeminiToolRegistry(ToolRegistry):
 
         declarations = []
         for tool in self.tools.values():
-            # Ensure parameters are compatible with types.FunctionDeclaration
-            # If it's a dict, the library usually handles it, but type checkers might complain.
-            # If it's already a types.Schema (or similar), it's passed through.
 
             if tool.parameters:
                 # Gemini does not support 'additionalProperties' in the schema

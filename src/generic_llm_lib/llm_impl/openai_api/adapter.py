@@ -2,7 +2,8 @@ from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletion, ChatCompletionToolParam
 from typing import List, Optional, Any, Dict, Sequence, Iterable, cast
 import json
-from generic_llm_lib.llm_core import ToolCallRequest, ToolCallResult, ToolAdapter
+from generic_llm_lib.llm_core.tools.call_protocol import ToolCallRequest, ToolCallResult
+from generic_llm_lib.llm_core.tools.adapter import ToolAdapter
 
 
 class OpenAIToolAdapter(ToolAdapter):

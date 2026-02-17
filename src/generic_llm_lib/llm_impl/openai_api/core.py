@@ -2,11 +2,18 @@ from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletion, ChatCompletionToolParam
 from typing import List, Tuple, Optional, Any, Dict, Iterable, cast
 import logging
-from generic_llm_lib.llm_core import GenericLLM, ToolRegistry
+from generic_llm_lib.llm_core import GenericLLM
 from generic_llm_lib.llm_core import ToolExecutionLoop
-from generic_llm_lib.llm_core.messages.models import BaseMessage, UserMessage, AssistantMessage, SystemMessage
+from generic_llm_lib.llm_core.messages.models import (
+    BaseMessage,
+    UserMessage,
+    AssistantMessage,
+    SystemMessage,
+    ToolMessage,
+)
 from generic_llm_lib.llm_core.base.base import ChatResult
 from .adapter import OpenAIToolAdapter
+from .registry import OpenAIToolRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +29,7 @@ class GenericOpenAI(GenericLLM[ChatCompletion]):
         client: AsyncOpenAI,
         model_name: str,
         sys_instruction: str,
-        registry: Optional[ToolRegistry] = None,
+        registry: Optional[OpenAIToolRegistry] = None,
         temp: float = 1.0,
         max_tokens: int = 3000,
         max_function_loops: int = 5,
@@ -42,7 +49,7 @@ class GenericOpenAI(GenericLLM[ChatCompletion]):
             tool_timeout: The maximum time in seconds to wait for a tool execution.
         """
         self.model: str = model_name
-        self.registry: Optional[ToolRegistry] = registry
+        self.registry: Optional[OpenAIToolRegistry] | None = registry
         self.max_function_loops = max_function_loops
         self.sys_instruction = sys_instruction
         self.temperature = temp
@@ -51,10 +58,13 @@ class GenericOpenAI(GenericLLM[ChatCompletion]):
 
         self.client: AsyncOpenAI = client
 
+        if self.registry is None:
+            self.registry = OpenAIToolRegistry()
+
         self._tool_loop = ToolExecutionLoop(
-            registry=registry,
-            max_function_loops=max_function_loops,
-            tool_timeout=tool_timeout,
+            registry=self.registry,
+            max_function_loops=self.max_function_loops,
+            tool_timeout=self.tool_timeout,
             argument_error_formatter=self._format_argument_error,
         )
 
@@ -113,18 +123,12 @@ class GenericOpenAI(GenericLLM[ChatCompletion]):
         # Get tools configuration
         tools: Iterable[ChatCompletionToolParam] | None = None
         if self.registry:
-            # We cast the tool_object to the expected type for OpenAI
-            # The registry returns List[Dict[str, Any]], which is compatible with ChatCompletionToolParam
-            # if structured correctly.
-            tools = cast(Iterable[ChatCompletionToolParam], self.registry.tool_object)
+            tools = self.registry.tool_object
 
             # logger.debug(f"Tools registered: {[t.get('function', {}).get('name') for t in tools]}")
 
         # Initial call to OpenAI
         # logger.debug(f"Sending initial request to OpenAI model: {self.model}")
-        # We need to cast messages to the expected type for OpenAI
-        # The history is List[Dict[str, Any]], but OpenAI expects Iterable[ChatCompletionMessageParam]
-        # Since Dict[str, Any] is compatible with the structure, we can cast it.
         response = await self.client.chat.completions.create(
             model=self.model,
             messages=cast(Iterable[Any], messages),
@@ -174,10 +178,16 @@ class GenericOpenAI(GenericLLM[ChatCompletion]):
             if isinstance(msg, UserMessage):
                 openai_history.append({"role": "user", "content": msg.content})
             elif isinstance(msg, AssistantMessage):
-                openai_history.append({"role": "assistant", "content": msg.content})
+                openai_msg = {"role": "assistant", "content": msg.content}
+                if msg.tool_calls:
+                    openai_msg["tool_calls"] = msg.tool_calls  # type: ignore
+                openai_history.append(openai_msg)
             elif isinstance(msg, SystemMessage):
                 openai_history.append({"role": "system", "content": msg.content})
-            # Tool messages handling would be more complex
+            elif isinstance(msg, ToolMessage):
+                openai_history.append(
+                    {"role": "tool", "content": msg.content, "tool_call_id": msg.tool_call_id, "name": msg.name}
+                )
         return openai_history
 
     async def _handle_function_calls(
@@ -210,9 +220,9 @@ class GenericOpenAI(GenericLLM[ChatCompletion]):
             max_tokens=self.max_tokens,
         )
 
-        final_response = await self._tool_loop.run(initial_response=initial_response, adapter=adapter)
+        final_response: ChatCompletion = await self._tool_loop.run(initial_response=initial_response, adapter=adapter)
 
-        return messages, cast(ChatCompletion, final_response)
+        return messages, final_response
 
     @staticmethod
     def _clean_history(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -289,16 +299,39 @@ class GenericOpenAI(GenericLLM[ChatCompletion]):
         for msg in history:
             role = msg.get("role")
             content = msg.get("content")
+            tool_calls = msg.get("tool_calls")
 
-            if not content:
-                continue
+            # Handle None content
+            if content is None:
+                if role == "assistant" and tool_calls:
+                    content = ""
+                else:
+                    # Skip messages with None content (except assistant with tools)
+                    continue
+
+            # Handle empty content
+            if content == "":
+                # Keep if it's an assistant with tool calls
+                if role == "assistant" and tool_calls:
+                    pass
+                # Keep if it's a tool response (must not be skipped to maintain conversation flow)
+                elif role == "tool":
+                    pass
+                else:
+                    # Skip empty user or system messages
+                    continue
 
             if role == "user":
                 generic_history.append(UserMessage(content=content))
             elif role == "assistant":
-                generic_history.append(AssistantMessage(content=content))
+                generic_history.append(AssistantMessage(content=content, tool_calls=tool_calls))
             elif role == "system":
                 generic_history.append(SystemMessage(content=content))
+            elif role == "tool":
+                tool_call_id = msg.get("tool_call_id")
+                name = msg.get("name", "unknown_tool")
+                if tool_call_id:
+                    generic_history.append(ToolMessage(content=content, tool_call_id=tool_call_id, name=name))
             # Handle other roles if necessary
         return generic_history
 

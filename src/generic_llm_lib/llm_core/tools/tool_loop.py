@@ -80,17 +80,15 @@ class ToolExecutionLoop:
 
             if not tool_calls:
                 logger.debug("No tool calls found in response. Loop finished.")
-                # We do NOT record the assistant message here because it's the final response
-                # and will be handled by the chat method's history management.
-                # adapter.record_assistant_message(current_response)
                 return current_response
 
             logger.info(f"Loop {loop_index + 1}/{self._max_function_loops}: Processing {len(tool_calls)} tool call(s).")
             adapter.record_assistant_message(current_response)
 
-            response_messages = []
             tasks = [self._handle_tool_call(tc) for tc in tool_calls]
             results = await asyncio.gather(*tasks)
+
+            response_messages = []
             for result in results:
                 response_messages.append(adapter.build_tool_response_message(result))
 
@@ -139,6 +137,7 @@ class ToolExecutionLoop:
                 call_id=tool_call.call_id,
             )
 
+        # Validate arguments against the model if provided
         if tool_def.args_model:
             try:
                 validated_args = tool_def.args_model(**function_args)
@@ -157,20 +156,21 @@ class ToolExecutionLoop:
             logger.info(f"Executing tool '{tool_call.name}'...")
             function_result = await self._execute_tool(tool_def.func, function_args)
             logger.info(f"Tool '{tool_call.name}' executed successfully.")
-        except self.RECOVERABLE_ERRORS as exc:
-            msg = str(exc)
-            logger.warning(f"Recoverable error in '{tool_call.name}': {msg} ({type(exc).__name__})")
+            return ToolCallResult(
+                name=tool_call.name,
+                response={"result": function_result},
+                call_id=tool_call.call_id,
+            )
+        except Exception as exc:
+            # Catch all exceptions during execution to prevent loop crash
+            # We treat them as tool errors to be reported back to the LLM
+            msg = f"Error executing tool '{tool_call.name}': {str(exc)}"
+            logger.error(msg, exc_info=True)
             return ToolCallResult(
                 name=tool_call.name,
                 response={"error": msg},
                 call_id=tool_call.call_id,
             )
-
-        return ToolCallResult(
-            name=tool_call.name,
-            response={"result": function_result},
-            call_id=tool_call.call_id,
-        )
 
     def _normalize_function_args(self, tool_name: str, raw_args: Any) -> Dict[str, Any]:
         """Normalize tool arguments into a dictionary.
@@ -196,7 +196,6 @@ class ToolExecutionLoop:
         if isinstance(raw_args, str):
             try:
                 parsed = json.loads(raw_args)
-
             except json.JSONDecodeError as exc:
                 raise ToolExecutionError(self._argument_error_formatter(tool_name, exc)) from exc
 
@@ -234,6 +233,7 @@ class ToolExecutionLoop:
                     timeout=self._tool_timeout,
                 )
 
+            # Run synchronous functions in a thread to avoid blocking the loop
             return await asyncio.wait_for(
                 asyncio.to_thread(tool_function, **function_args),
                 timeout=self._tool_timeout,

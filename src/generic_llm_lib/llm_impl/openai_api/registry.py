@@ -1,5 +1,7 @@
+from openai.types.chat import ChatCompletionFunctionToolParam
+
 from generic_llm_lib.llm_core import ToolRegistry, ToolDefinition
-from typing import Callable, Dict, Any, Union, Optional, List
+from typing import Callable, Dict, Any, Union, Optional, Iterable, cast
 
 
 class OpenAIToolRegistry(ToolRegistry):
@@ -39,7 +41,7 @@ class OpenAIToolRegistry(ToolRegistry):
         super().register(name_or_tool, description, func, parameters)
 
     @property
-    def tool_object(self) -> List[Dict[str, Any]] | None:
+    def tool_object(self) -> Iterable[ChatCompletionFunctionToolParam] | None:
         """
         Generates a list of tool definitions suitable for the OpenAI API
         based on the registered tools.
@@ -66,7 +68,7 @@ class OpenAIToolRegistry(ToolRegistry):
 
             tools_list.append({"type": "function", "function": function_def})
 
-        return tools_list
+        return cast(Iterable[ChatCompletionFunctionToolParam], tools_list)
 
     @property
     def implementations(self) -> Dict[str, Callable]:

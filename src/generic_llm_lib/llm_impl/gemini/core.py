@@ -3,10 +3,11 @@ from typing import List, Tuple, Optional, Any, Sequence
 
 from google.genai.client import AsyncClient
 from google.genai.types import GenerateContentResponse
-from generic_llm_lib.llm_core import GenericLLM, ToolRegistry, ToolExecutionLoop, get_logger
+from generic_llm_lib.llm_core import GenericLLM, ToolExecutionLoop, get_logger
 from generic_llm_lib.llm_core.messages.models import BaseMessage, UserMessage, AssistantMessage, SystemMessage
 from generic_llm_lib.llm_core.base.base import ChatResult
 from .adapter import GeminiToolAdapter
+from .registry import GeminiToolRegistry
 
 logger = get_logger(__name__)
 
@@ -22,7 +23,7 @@ class GenericGemini(GenericLLM[GenerateContentResponse]):
         aclient: AsyncClient,
         model_name: str,
         sys_instruction: str,
-        registry: Optional[ToolRegistry] = None,
+        registry: Optional[GeminiToolRegistry] = None,
         temp: float = 1.0,
         max_tokens: int = 3000,
         max_function_loops: int = 5,
@@ -35,16 +36,17 @@ class GenericGemini(GenericLLM[GenerateContentResponse]):
             aclient: The initialized Google GenAI client.
             model_name: The identifier for the Gemini model to use (e.g., 'gemini-pro', 'gemini-flash-latest').
             sys_instruction: A system-level instruction or persona for the LLM.
-            registry: An optional ToolRegistry instance containing tools the LLM can use.
+            registry: An optional GeminiToolRegistry instance containing tools the LLM can use.
             temp: The temperature for text generation, controlling randomness.
             max_tokens: The maximum number of tokens to generate in the response.
             max_function_loops: The maximum number of consecutive function calls the LLM can make.
             tool_timeout: The maximum time in seconds to wait for a tool execution.
         """
         self.model: str = model_name
-        self.registry: Optional[ToolRegistry] = registry
+        self.registry: Optional[GeminiToolRegistry] = registry
         self.max_function_loops = max_function_loops
         self.tool_timeout = tool_timeout
+
         self._tool_loop = ToolExecutionLoop(
             registry=registry,
             max_function_loops=max_function_loops,
@@ -52,7 +54,7 @@ class GenericGemini(GenericLLM[GenerateContentResponse]):
         )
 
         # Only include tools if there are any registered
-        tools_config = None
+        tools_config: Optional[List[Any]] = None
         if self.registry:
             tool_obj = self.registry.tool_object
             if tool_obj:

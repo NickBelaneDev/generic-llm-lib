@@ -80,39 +80,7 @@ async def test_tool_execution_loop_runs_tools() -> None:
 
     tool_func.assert_called_once_with(a=1)
     assert response == final_response
-    # The loop records the initial response, then sends tool responses which returns final_response.
-    # The final_response is NOT recorded by the loop itself, it's returned.
-    # Wait, let's check ToolExecutionLoop.run implementation.
-    # It calls adapter.record_assistant_message(initial_response) at the start.
-    # Then it loops. Inside loop:
-    #   adapter.send_tool_responses(tool_messages) -> returns new_response
-    #   adapter.record_assistant_message(new_response)
-    # So if loop runs once (one tool call), we expect:
-    # 1. record(initial_response)
-    # 2. send_tool_responses -> final_response
-    # 3. record(final_response)
-    # 4. loop checks final_response for tool calls -> empty -> break
-    # So recorded should be [initial_response] because the loop breaks immediately if no tool calls are found in the new response
-    # and it does NOT record the final response inside the loop if it breaks early.
-    # Let's re-read ToolExecutionLoop.run:
-    # for loop_index in range(max_loops):
-    #   tool_calls = adapter.get_tool_calls(current_response)
-    #   if not tool_calls: return current_response
-    #   adapter.record_assistant_message(current_response)
-    #   ...
-    #   current_response = await adapter.send_tool_responses(...)
-    #
-    # So:
-    # Loop 0:
-    #   tool_calls = [sample] (not empty)
-    #   record(initial_response) -> recorded = [initial_response]
-    #   execute tool -> result
-    #   current_response = send_tool_responses(...) -> final_response
-    # Loop 1:
-    #   tool_calls = [] (empty)
-    #   return current_response (final_response)
-    #
-    # So recorded should be [initial_response] only.
+
     assert recorded == [initial_response]
     assert captured_tool_results[0].response == {"result": "ok"}
 

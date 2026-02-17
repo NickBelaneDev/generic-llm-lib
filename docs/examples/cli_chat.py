@@ -1,4 +1,4 @@
-import asyncio
+# import asyncio
 import os
 from typing import List
 
@@ -53,4 +53,5 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    raise NotImplementedError("This module is still under construction. Please hold the line...")
+    # asyncio.run(main())
