@@ -7,6 +7,8 @@ from .llm_core import (
     SystemMessage,
     ToolMessage,
     ToolRegistry,
+    ToolManager,
+    ScopedTool
 )
 from .llm_impl.gemini import GenericGemini, GeminiToolRegistry
 from .llm_impl.openai_api import GenericOpenAI, OpenAIToolRegistry
@@ -20,8 +22,10 @@ __all__ = [
     "SystemMessage",
     "ToolMessage",
     "ToolRegistry",
+    "ToolManager",
+    "ScopedTool",
     "GenericGemini",
     "GeminiToolRegistry",
     "GenericOpenAI",
-    "OpenAIToolRegistry",
+    "OpenAIToolRegistry"
 ]

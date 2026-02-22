@@ -4,8 +4,7 @@ from pathlib import Path
 import pytest
 from openai import AsyncOpenAI
 
-from generic_llm_lib.llm_core.base.base import ChatResult
-from generic_llm_lib.llm_impl import GenericOpenAI
+from generic_llm_lib import ChatResult, GenericOpenAI
 from dotenv import load_dotenv, find_dotenv
 
 load_dotenv(find_dotenv())

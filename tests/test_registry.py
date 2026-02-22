@@ -1,10 +1,8 @@
 import pytest
 from typing import Annotated, List, Optional, Any
 from pydantic import Field, BaseModel
-from generic_llm_lib.llm_core import ToolRegistry
+from generic_llm_lib import ToolRegistry, GeminiToolRegistry, OpenAIToolRegistry
 from generic_llm_lib.llm_core import ToolValidationError
-from generic_llm_lib.llm_impl.gemini import GeminiToolRegistry
-from generic_llm_lib.llm_impl.openai_api.registry import OpenAIToolRegistry
 from google.genai import types
 import json
 

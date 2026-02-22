@@ -3,9 +3,9 @@ from unittest.mock import AsyncMock
 from pydantic import BaseModel
 from typing import Sequence, Any, Dict, List, Callable, Awaitable, cast
 
-from generic_llm_lib.llm_core import ToolExecutionLoop, ToolCallRequest, ToolCallResult, ToolAdapter
-from generic_llm_lib.llm_impl.openai_api.registry import OpenAIToolRegistry
-from generic_llm_lib.llm_core import ToolDefinition
+from generic_llm_lib.llm_core import ToolExecutionLoop, ToolCallRequest, ToolCallResult, ToolAdapter, ToolDefinition
+from generic_llm_lib import OpenAIToolRegistry
+
 
 
 class SampleArgs(BaseModel):

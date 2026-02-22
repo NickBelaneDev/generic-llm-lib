@@ -2,16 +2,13 @@ import pytest
 
 from dotenv import load_dotenv, find_dotenv
 
-from generic_llm_lib.llm_impl.gemini.core import GenericGemini
-from generic_llm_lib.llm_core.base.base import ChatResult
-from generic_llm_lib.llm_impl.gemini import GeminiToolRegistry
-from generic_llm_lib.llm_core.messages.models import UserMessage, AssistantMessage
+from generic_llm_lib import GenericGemini, ChatResult, GeminiToolRegistry, UserMessage, AssistantMessage
+
 from typing import Annotated
 from pydantic import Field
 from google.genai.client import AsyncClient
 
 load_dotenv(find_dotenv())
-
 
 @pytest.mark.asyncio
 async def test_generic_gemini_initialization(genai_client: AsyncClient) -> None:

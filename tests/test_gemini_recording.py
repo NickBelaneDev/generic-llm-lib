@@ -4,8 +4,7 @@ from pathlib import Path
 import pytest
 from google.genai import Client
 
-from generic_llm_lib.llm_core.base.base import ChatResult
-from generic_llm_lib.llm_impl.gemini.core import GenericGemini
+from generic_llm_lib import ChatResult, GenericGemini
 
 CASSETTE_NAME = "gemini_chat.yaml"
 
