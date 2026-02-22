@@ -1,3 +1,5 @@
+"""Provide helpers to serialize or recreate directory trees for repository utility scripts."""
+
 from pathlib import Path
 from typing import Dict, Union, Any
 
@@ -5,6 +7,8 @@ LIBRARY_ROOT = Path(__file__).parent
 
 
 class DirectoryScanner:
+    """Read or materialize a directory tree for helper scripts."""
+
     def __init__(self) -> None:
         self.max_reads = 100
         self.current_read = 0
@@ -28,6 +32,15 @@ class DirectoryScanner:
         return data
 
     def json_tree_to_string(self, data: Dict[str, Any], indent: int = 0) -> str:
+        """Convert a nested dictionary tree into an indented string representation.
+
+        Args:
+            data: Tree data where nested dictionaries represent directories.
+            indent: Current indentation depth used while walking recursively.
+
+        Returns:
+            A human-readable tree string.
+        """
         content_string = ""
         for k, v in data.items():
             if isinstance(v, dict):

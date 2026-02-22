@@ -1,3 +1,5 @@
+"""Copy the bundled tutorial agent guide into a target location for onboarding flows."""
+
 from pathlib import Path
 
 

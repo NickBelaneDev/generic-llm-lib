@@ -1,3 +1,5 @@
+"""Convert OpenAI tool-calling payloads to and from the library's internal tool loop format."""
+
 from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletion, ChatCompletionToolParam
 from typing import List, Optional, Any, Dict, Sequence, Iterable, cast

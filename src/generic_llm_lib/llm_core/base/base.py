@@ -1,3 +1,5 @@
+"""Define the provider-independent LLM contract and normalized chat result container."""
+
 from typing import List, Optional, TypeVar, Generic
 from abc import ABC, abstractmethod
 from generic_llm_lib.llm_core.messages.models import BaseMessage
@@ -7,6 +9,8 @@ ProviderResT = TypeVar("ProviderResT")
 
 
 class ChatResult(BaseModel, Generic[ProviderResT]):
+    """Standard response container for all provider implementations."""
+
     content: str
     history: List[BaseMessage]
     raw: ProviderResT

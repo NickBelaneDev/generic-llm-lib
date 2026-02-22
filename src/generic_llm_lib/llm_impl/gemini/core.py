@@ -1,3 +1,5 @@
+"""Implement the GenericLLM interface for Google Gemini chat and tool-calling workflows."""
+
 from google.genai import types
 from typing import List, Tuple, Optional, Any, Sequence
 

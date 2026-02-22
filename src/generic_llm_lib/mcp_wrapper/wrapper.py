@@ -1,3 +1,5 @@
+"""Bridge MCP server tools into ToolRegistry entries through async stdio client sessions."""
+
 import logging
 from contextlib import AsyncExitStack
 from types import TracebackType
@@ -85,6 +87,14 @@ class MCPClientWrapper:
         tool_description = tool.description or f"Tool {tool_name} provided by MCP server."
 
         async def mcp_proxy(**kwargs: Any) -> Any:
+            """Proxy MCP tool calls through the active client session.
+
+            Args:
+                **kwargs: Keyword arguments forwarded to the remote MCP tool.
+
+            Returns:
+                A normalized string representation of MCP content blocks.
+            """
             if not self._session:
                 raise RuntimeError(f"Cannot call tool '{tool_name}': MCP session is not active.")
 

@@ -1,3 +1,5 @@
+"""Aggregate core abstractions, message models, and tooling primitives for library internals."""
+
 from .base import GenericLLM, ChatResult
 from .tools import ToolRegistry
 from .exceptions import (

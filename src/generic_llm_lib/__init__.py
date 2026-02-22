@@ -1,3 +1,5 @@
+"""Expose the stable public API for provider-agnostic and provider-specific LLM clients."""
+
 from .llm_core import (
     GenericLLM,
     ChatResult,

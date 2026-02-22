@@ -1,3 +1,5 @@
+"""Validate and sanitize JSON schemas so registered tools stay compatible across providers."""
+
 from typing import Any, Dict, Set
 
 from generic_llm_lib.llm_core.exceptions.exceptions import ToolValidationError

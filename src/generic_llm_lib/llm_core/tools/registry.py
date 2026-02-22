@@ -1,3 +1,5 @@
+"""Implement the central tool registry for validating, storing, and exposing callable tools."""
+
 from abc import abstractmethod, ABC
 from typing import Callable, Dict, Any, Union, Optional, get_origin, Annotated, get_args, cast
 

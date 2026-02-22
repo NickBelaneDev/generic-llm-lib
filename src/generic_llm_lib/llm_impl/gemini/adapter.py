@@ -1,3 +1,5 @@
+"""Translate Gemini tool-calling payloads into the library's provider-agnostic tool protocol."""
+
 from google.genai import types
 from typing import Any, Sequence, cast
 from google.genai.types import GenerateContentResponse

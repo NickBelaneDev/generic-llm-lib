@@ -1,3 +1,5 @@
+"""Declare shared data structures that describe tool metadata and input schemas."""
+
 from typing import Optional, Any, Callable, Type
 from pydantic import BaseModel
 

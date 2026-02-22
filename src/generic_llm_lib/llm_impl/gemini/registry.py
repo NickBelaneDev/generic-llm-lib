@@ -1,3 +1,5 @@
+"""Adapt generic tool definitions into Gemini-compatible function declaration structures."""
+
 from google.genai import types
 from generic_llm_lib.llm_core import ToolRegistry, ToolDefinition
 from typing import Callable, Dict, Any, Union, Optional

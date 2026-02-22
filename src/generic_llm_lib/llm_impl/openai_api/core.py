@@ -1,3 +1,5 @@
+"""Implement the GenericLLM interface for OpenAI chat completions with optional tool execution."""
+
 from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletion, ChatCompletionToolParam
 from typing import List, Tuple, Optional, Any, Dict, Iterable, cast

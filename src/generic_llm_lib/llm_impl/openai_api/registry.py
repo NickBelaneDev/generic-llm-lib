@@ -1,3 +1,5 @@
+"""Render registered tools into OpenAI-compatible function tool specifications."""
+
 from openai.types.chat import ChatCompletionFunctionToolParam
 
 from generic_llm_lib.llm_core import ToolRegistry, ToolDefinition

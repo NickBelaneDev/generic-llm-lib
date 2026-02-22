@@ -1,3 +1,5 @@
+"""Load, inspect, and execute plugin tools dynamically from a configurable tools directory."""
+
 import importlib.util
 import inspect
 import os
@@ -168,6 +170,16 @@ class ToolManager(Generic[R]):
         function_name: Annotated[str, Field(description="Name of the function to execute")],
         kwargs_json: Annotated[str, Field(description="JSON string of the function's arguments")],
     ) -> str:
+        """Load, execute, and unload a plugin function using JSON arguments.
+
+        Args:
+            plugin_path: Dotted module path that contains the function.
+            function_name: Function name to execute from the plugin module.
+            kwargs_json: JSON string containing keyword arguments for the function.
+
+        Returns:
+            The function result converted to a string, or a formatted error message.
+        """
         from generic_llm_lib.llm_core.tools.scoped_tool import ScopedTool
 
         logger.info("Executing dynamic tool '%s' from '%s'.", function_name, plugin_path)

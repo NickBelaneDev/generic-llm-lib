@@ -1,3 +1,5 @@
+"""Provide centralized logger creation and default logging setup for the library namespace."""
+
 import logging
 import sys
 

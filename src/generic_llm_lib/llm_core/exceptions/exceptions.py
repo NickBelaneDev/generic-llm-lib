@@ -1,3 +1,5 @@
+"""Define domain-specific exceptions for tool discovery, registration, validation, and runtime failures."""
+
 class LLMToolError(Exception):
     """Base exception for all tool-related errors."""
 
