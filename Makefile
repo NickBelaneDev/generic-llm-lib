@@ -1,4 +1,4 @@
-.PHONY: quality security complexity fix test release
+.PHONY: quality security doc complexity fix test release
 
 quality:
 	uv sync --all-extras --dev
@@ -9,6 +9,8 @@ quality:
 security:
 	uv run bandit -r src/
 	uv run pip-audit
+
+doc:
 	uv run interrogate -vv --fail-under 90 src/
 
 complexity:

@@ -6,6 +6,7 @@ from pydantic.fields import FieldInfo
 from pydantic import create_model
 
 from .models import ToolDefinition
+from ..exceptions.exceptions import ToolNotFoundError
 from ..exceptions.exceptions import ToolRegistrationError, ToolValidationError
 from .schema_validator import SchemaValidator
 from ..logger import get_logger
@@ -14,6 +15,7 @@ import inspect
 logger = get_logger(__name__)
 
 
+# class ToolRegistry(ABC, Generic[ProviderResT]):
 class ToolRegistry(ABC):
     """
     A central registry to manage and access all available LLM tools.
@@ -73,6 +75,16 @@ class ToolRegistry(ABC):
 
         self.tools[tool.name] = tool
         logger.info(f"Successfully registered tool: '{tool.name}'")
+
+    def unregister(self, tool_name: str) -> None:
+        """
+        Unregister a tool from the registry.
+        """
+        if tool_name in self.tools:
+            del self.tools[tool_name]
+            logger.info(f"Successfully unregistered tool: '{tool_name}'")
+        else:
+            raise ToolNotFoundError(f"Tool '{tool_name}' not found in the registry.")
 
     @staticmethod
     def _generate_tool_definition(

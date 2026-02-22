@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import MagicMock
 from generic_llm_lib.llm_core.tools.tool_manager import ToolManager
 from generic_llm_lib.llm_core.tools.registry import ToolRegistry
-from generic_llm_lib.llm_core.exceptions.exceptions import ToolRegistrationError
+from generic_llm_lib.llm_core.exceptions.exceptions import ToolRegistrationError, ToolLoadError
 
 # --- Fixtures ---
 
@@ -105,17 +105,17 @@ def test_load_specific_tool_success(tool_manager, mock_registry):
 
 def test_load_specific_tool_function_not_found(tool_manager, mock_registry):
     """Test loading a non-existent function from a valid module."""
-    result = tool_manager.load_specific_tool("dummy_tool", "non_existent_func")
+    with pytest.raises(ToolLoadError, match="Failed to load tool non_existent_func from dummy_tool"):
+        tool_manager.load_specific_tool("dummy_tool", "non_existent_func")
 
-    assert "Error: Function 'non_existent_func' not found" in result
     mock_registry.register.assert_not_called()
 
 
 def test_load_specific_tool_module_not_found(tool_manager, mock_registry):
     """Test loading from a non-existent module."""
-    result = tool_manager.load_specific_tool("non_existent_module", "my_tool")
+    with pytest.raises(ToolLoadError, match="Failed to load tool my_tool from non_existent_module"):
+        tool_manager.load_specific_tool("non_existent_module", "my_tool")
 
-    assert "Critical error loading tool" in result
     mock_registry.register.assert_not_called()
 
 
@@ -124,6 +124,5 @@ def test_load_specific_tool_registration_error(tool_manager, mock_registry):
     # Simulate registry raising an error (e.g. tool already registered)
     mock_registry.register.side_effect = ToolRegistrationError("Tool already registered")
 
-    result = tool_manager.load_specific_tool("dummy_tool", "my_tool")
-
-    assert "Critical error loading tool: Tool already registered" in result
+    with pytest.raises(ToolLoadError, match="Failed to load tool my_tool from dummy_tool: Tool already registered"):
+        tool_manager.load_specific_tool("dummy_tool", "my_tool")

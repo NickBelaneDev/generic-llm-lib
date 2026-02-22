@@ -4,6 +4,12 @@ class LLMToolError(Exception):
     pass
 
 
+class ToolLoadError(LLMToolError):
+    """Raised when there is an error loading a tool."""
+
+    pass
+
+
 class ToolRegistrationError(LLMToolError):
     """Raised when there is an error registering a tool."""
 

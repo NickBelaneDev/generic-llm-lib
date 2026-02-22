@@ -14,6 +14,7 @@ from generic_llm_lib.llm_core.messages.models import (
 from generic_llm_lib.llm_core.base.base import ChatResult
 from .adapter import OpenAIToolAdapter
 from .registry import OpenAIToolRegistry
+from ...llm_core.tools.tool_manager import ToolManager
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +35,7 @@ class GenericOpenAI(GenericLLM[ChatCompletion]):
         max_tokens: int = 3000,
         max_function_loops: int = 5,
         tool_timeout: float = 180.0,
+        tool_manager: Optional[ToolManager[OpenAIToolRegistry]] = None,
     ):
         """
         Initializes the GenericOpenAI LLM wrapper.
@@ -55,10 +57,16 @@ class GenericOpenAI(GenericLLM[ChatCompletion]):
         self.temperature = temp
         self.max_tokens = max_tokens
         self.tool_timeout = tool_timeout
-
         self.client: AsyncOpenAI = client
 
-        if self.registry is None:
+        self.tool_manager = tool_manager
+
+        if registry:
+            self.registry = registry
+        elif self.tool_manager:
+            # When injecting a ToolManager we need to use his registry
+            self.registry = self.tool_manager.registry
+        else:
             self.registry = OpenAIToolRegistry()
 
         self._tool_loop = ToolExecutionLoop(

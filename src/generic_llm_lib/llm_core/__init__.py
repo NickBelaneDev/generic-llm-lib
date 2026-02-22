@@ -20,6 +20,7 @@ from .tools.adapter import ToolAdapter
 from .tools.call_protocol import ToolCallRequest, ToolCallResult
 from .tools.tool_loop import ToolExecutionLoop
 from .tools.schema_validator import SchemaValidator
+from .tools.scoped_tool import ScopedTool
 
 __all__ = [
     "GenericLLM",
@@ -43,4 +44,5 @@ __all__ = [
     "ToolCallResult",
     "ToolExecutionLoop",
     "SchemaValidator",
+    "ScopedTool",
 ]

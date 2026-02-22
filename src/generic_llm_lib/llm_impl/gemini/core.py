@@ -8,6 +8,7 @@ from generic_llm_lib.llm_core.messages.models import BaseMessage, UserMessage, A
 from generic_llm_lib.llm_core.base.base import ChatResult
 from .adapter import GeminiToolAdapter
 from .registry import GeminiToolRegistry
+from ...llm_core.tools.tool_manager import ToolManager
 
 logger = get_logger(__name__)
 
@@ -28,6 +29,7 @@ class GenericGemini(GenericLLM[GenerateContentResponse]):
         max_tokens: int = 3000,
         max_function_loops: int = 5,
         tool_timeout: float = 180.0,
+        tool_manager: Optional[ToolManager[GeminiToolRegistry]] = None,
     ):
         """
         Initializes the GenericGemini LLM wrapper.
@@ -43,9 +45,19 @@ class GenericGemini(GenericLLM[GenerateContentResponse]):
             tool_timeout: The maximum time in seconds to wait for a tool execution.
         """
         self.model: str = model_name
-        self.registry: Optional[GeminiToolRegistry] = registry
+
         self.max_function_loops = max_function_loops
         self.tool_timeout = tool_timeout
+
+        self.tool_manager = tool_manager
+
+        if registry:
+            self.registry = registry
+        elif self.tool_manager:
+
+            self.registry = self.tool_manager.registry
+        else:
+            self.registry = GeminiToolRegistry()
 
         self._tool_loop = ToolExecutionLoop(
             registry=registry,
