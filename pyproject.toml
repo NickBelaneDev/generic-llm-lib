@@ -33,6 +33,11 @@ dev = [
     "pytest-asyncio>=0.24.0",
     "pytest-recording>=0.13.0",
     "ruff>=0.1.0",
+    "pytest-cov>=7.0.0",
+    "bandit>=1.9.3",
+    "pip-audit>=2.10.0",
+    "xenon>=0.9.3",
+    "interrogate>=1.7.0",
 ]
 
 [tool.pytest.ini_options]

@@ -7,8 +7,8 @@ on:
     branches: [ "main", "master" ]
 
 jobs:
-  quality:
-    name: Code Quality
+  quality-and-security:
+    name: Quality & Security
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -32,45 +32,70 @@ jobs:
       - name: Run Black (Formatting)
         run: uv run black --check .
 
-      - name: Run Mypy (Type Checking)
-        run: uv run mypy src
+      - name: Run Bandit (Security)
+        # Scannt src/ auf Sicherheitsrisiken (z.B. unsichere Funktionsaufrufe)
+        run: uv run bandit -r src/
 
-  tests:
-    name: Tests
+      - name: Run Pip-audit (Vulnerabilities)
+        # Prüft Abhängigkeiten wie google-genai oder openai auf bekannte CVEs
+        run: uv run pip-audit
+
+      - name: Run Interrogate (Docstrings)
+        # Erzwingt eine Dokumentationsabdeckung von mindestens 90% im src-Verzeichnis
+        run: uv run interrogate -vv --fail-under 90 src/
+
+  types-and-complexity:
+    name: Types & Complexity
     runs-on: ubuntu-latest
-    needs: quality
+    needs: quality-and-security
     steps:
       - uses: actions/checkout@v4
-
       - name: Install uv
         uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version-file: "pyproject.toml"
-
       - name: Install dependencies
         run: uv sync --all-extras --dev
 
-      - name: Run Tests
-        run: uv run pytest
+      - name: Run Mypy (Static Types)
+        # Nutzt die Konfiguration aus deiner pyproject.toml
+        run: uv run mypy src
+
+      - name: Run Xenon (Complexity)
+        # Bricht ab, wenn der Code komplexer als Rang A ist (max. 10 Pfade pro Funktion)
+        run: uv run xenon --max-absolute A --max-modules A --max-average A src/
+
+  tests:
+    name: Tests & Coverage
+    runs-on: ubuntu-latest
+    needs: types-and-complexity
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: "pyproject.toml"
+      - name: Install dependencies
+        run: uv sync --all-extras --dev
+
+      - name: Run Tests with Coverage
+        # Führt Tests aus und bricht ab, wenn die Abdeckung unter 90% liegt
+        run: uv run pytest --cov=src --cov-report=term-missing --cov-fail-under=90
 
   backup:
     name: Backup
     runs-on: ubuntu-latest
     needs: tests
-
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && github.event_name == 'push'
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
       - name: Push to backup branch
-
         run: git push origin HEAD:backup/main --force

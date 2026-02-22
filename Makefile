@@ -1,10 +1,18 @@
-.PHONY: quality fix test release
+.PHONY: quality security complexity fix test release
 
 quality:
 	uv sync --all-extras --dev
 	uv run ruff check .
 	uv run black --check .
 	uv run mypy src
+
+security:
+	uv run bandit -r src/
+	uv run pip-audit
+	uv run interrogate -vv --fail-under 90 src/
+
+complexity:
+	uv run xenon --max-absolute A --max-modules A --max-average A src/
 
 fix:
 	uv run ruff check . --fix
