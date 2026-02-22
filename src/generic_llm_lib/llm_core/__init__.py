@@ -8,6 +8,7 @@ from .exceptions import (
     ToolNotFoundError,
     ToolExecutionError,
     ToolValidationError,
+    ToolLoadError
 )
 from .tools.models import ToolDefinition
 from .logger import get_logger, setup_logging
@@ -23,6 +24,7 @@ from .tools.call_protocol import ToolCallRequest, ToolCallResult
 from .tools.tool_loop import ToolExecutionLoop
 from .tools.schema_validator import SchemaValidator
 from .tools.scoped_tool import ScopedTool
+from .tools.tool_manager import ToolManager
 
 __all__ = [
     "GenericLLM",
@@ -34,6 +36,7 @@ __all__ = [
     "ToolNotFoundError",
     "ToolExecutionError",
     "ToolValidationError",
+    "ToolLoadError",
     "get_logger",
     "setup_logging",
     "BaseMessage",
@@ -47,4 +50,5 @@ __all__ = [
     "ToolExecutionLoop",
     "SchemaValidator",
     "ScopedTool",
+    "ToolManager"
 ]

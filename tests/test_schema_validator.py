@@ -1,6 +1,5 @@
 import pytest
-from generic_llm_lib.llm_core import SchemaValidator
-from generic_llm_lib.llm_core import ToolValidationError
+from generic_llm_lib.llm_core import SchemaValidator, ToolValidationError
 
 
 def test_assert_no_recursive_refs_no_recursion() -> None:

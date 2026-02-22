@@ -1,10 +1,12 @@
-from generic_llm_lib.llm_core.messages.models import (
+from generic_llm_lib import (
     UserMessage,
     AssistantMessage,
     SystemMessage,
     ToolMessage,
+    GenericOpenAI
 )
-from generic_llm_lib.llm_impl.openai_api.core import GenericOpenAI
+
+
 
 
 class TestMessageConversion:

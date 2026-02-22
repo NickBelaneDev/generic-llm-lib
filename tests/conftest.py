@@ -1,9 +1,12 @@
 import os
+from unittest.mock import MagicMock
+
 import pytest
-from typing import Any
+from typing import Any, cast
 from dotenv import load_dotenv, find_dotenv
 from google.genai.client import Client, AsyncClient
 from openai import AsyncOpenAI
+from generic_llm_lib import ToolManager, OpenAIToolRegistry
 
 # Load environment variables from .env file
 # We explicitly look for .env in the project root if find_dotenv() fails or returns empty
@@ -49,6 +52,21 @@ def openai_client() -> AsyncOpenAI:
         api_key = "dummy_key"
     return AsyncOpenAI(api_key=api_key, base_url=os.getenv("OPENAI_BASE_URL"))
 
+
+@pytest.fixture
+def openai_mock_tool_manager() -> ToolManager[OpenAIToolRegistry]:
+    """
+    Baut eine atomare Mock-Umgebung für den generischen ToolManager auf.
+    """
+    # 1. Erstelle die Mocks mit der korrekten Spezifikation (spec)
+    manager_mock = MagicMock(spec=ToolManager)
+    registry_mock = MagicMock(spec=OpenAIToolRegistry)
+
+    # 2. Verknüpfe die Mocks intern
+    manager_mock.registry = registry_mock
+
+    # 3. Zwinge den Typ-Checker, den Mock als instanziierten Generic zu akzeptieren
+    return cast(ToolManager[OpenAIToolRegistry], manager_mock)
 
 @pytest.fixture(scope="session")
 def vcr_config() -> dict[str, Any]:

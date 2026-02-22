@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from mcp.types import Tool as MCPTool, TextContent, CallToolResult, ListToolsResult
 from generic_llm_lib.mcp_wrapper import MCPClientWrapper
-from generic_llm_lib.llm_core import ToolRegistry
+from generic_llm_lib import ToolRegistry
 from typing import Any
 
 
