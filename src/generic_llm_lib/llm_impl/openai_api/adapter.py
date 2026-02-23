@@ -1,9 +1,17 @@
+from __future__ import annotations
+
 from openai import AsyncOpenAI
-from openai.types.chat import ChatCompletion, ChatCompletionToolParam
-from typing import List, Optional, Any, Dict, Sequence, Iterable, cast
+from openai.types.chat import ChatCompletion
+from typing import List, Optional, Any, Dict, Sequence, Iterable, cast, TYPE_CHECKING
 import json
+
+# from generic_llm_lib import OpenAIToolRegistry
 from generic_llm_lib.llm_core.tools.call_protocol import ToolCallRequest, ToolCallResult
 from generic_llm_lib.llm_core.tools.adapter import ToolAdapter
+
+if TYPE_CHECKING:
+    # we need to typecheck for the OpenAIToolRegistry we are experiencing a circular import
+    from .registry import OpenAIToolRegistry
 
 
 class OpenAIToolAdapter(ToolAdapter):
@@ -14,7 +22,7 @@ class OpenAIToolAdapter(ToolAdapter):
         client: AsyncOpenAI,
         model: str,
         messages: List[Dict[str, Any]],
-        tools: Optional[Iterable[ChatCompletionToolParam]],
+        registry: Optional[OpenAIToolRegistry],
         temperature: float,
         max_tokens: int,
     ):
@@ -24,14 +32,14 @@ class OpenAIToolAdapter(ToolAdapter):
             client: The OpenAI client instance.
             model: The name of the model to use.
             messages: The conversation history.
-            tools: Optional list of tool definitions.
+            registry: Optional list of tool definitions.
             temperature: Sampling temperature.
             max_tokens: Maximum number of tokens to generate.
         """
         self.client = client
         self.model = model
         self.messages = messages
-        self.tools = tools
+        self.registry = registry
         self.temperature = temperature
         self.max_tokens = max_tokens
 
@@ -99,12 +107,13 @@ class OpenAIToolAdapter(ToolAdapter):
         """
         self.messages.extend(tool_messages)
 
+        current_tools = self.registry.tool_object if self.registry else None
         # We need to cast messages to Iterable[Any] because the library expects a specific union of message types
         # but we are using List[Dict[str, Any]] which is structurally compatible.
         return await self.client.chat.completions.create(
             model=self.model,
             messages=cast(Iterable[Any], self.messages),
-            tools=self.tools,  # type: ignore[arg-type]
+            tools=current_tools,  # type: ignore[arg-type]
             temperature=self.temperature,
             max_tokens=self.max_tokens,
         )

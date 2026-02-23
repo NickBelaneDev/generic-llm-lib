@@ -37,7 +37,9 @@ def temp_tools_dir(tmp_path):
 @pytest.fixture
 def tool_manager(mock_registry, temp_tools_dir):
     """Creates a ToolManager instance with the temp directory."""
-    return ToolManager(registry=mock_registry, tools_dir=temp_tools_dir)
+    manager = ToolManager(registry=mock_registry, tools_dir=temp_tools_dir)
+    mock_registry.register.reset_mock()
+    return manager
 
 
 # --- Tests ---

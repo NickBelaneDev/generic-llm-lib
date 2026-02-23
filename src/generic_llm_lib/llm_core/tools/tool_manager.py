@@ -2,13 +2,14 @@ import importlib.util
 import inspect
 import os
 import json
+import warnings
 from pathlib import Path
-from typing import Annotated, Any, Dict, TypeVar, Generic
+from typing import Annotated, Any, Dict, TypeVar, Generic, Literal
 
 from pydantic import Field
 
-from generic_llm_lib.llm_core.exceptions.exceptions import ToolLoadError
-from generic_llm_lib.llm_core.tools.registry import ToolRegistry
+from generic_llm_lib.llm_core import ToolLoadError
+from generic_llm_lib.llm_core import ToolRegistry
 from generic_llm_lib.llm_core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -21,7 +22,7 @@ class ToolManager(Generic[R]):
     This allows the LLM to discover and load tools at runtime.
     """
 
-    def __init__(self, registry: R, tools_dir: str | Path):
+    def __init__(self, registry: R, tools_dir: str | Path, mode: Literal["proxy", "hot_swap"] = "proxy"):
         """
         Initialize the ToolManager.
 
@@ -32,12 +33,32 @@ class ToolManager(Generic[R]):
         self.registry = registry
         self.tools_dir = Path(tools_dir)
         self._module_cache: Dict[str, Any] = {}
+        self.mode = mode
         self._register_default_tools()
 
-    def _register_default_tools(self):
+        warnings.warn(
+            "DynamicToolManager is an experimental feature. It may lead to hallucination loops "
+            "and JSON parsing errors in models with < 70B parameters. Use with caution.",
+            UserWarning,
+            stacklevel=2,
+        )
+
+    def _register_default_tools(self) -> None:
+        """
+        Registers the default management tools into the registry.
+
+        This method enables the LLM to browse, inspect, and execute or load
+        dynamic tools based on the configured operational mode.
+        """
+
         self.registry.register(self.browse_plugins)
         self.registry.register(self.inspect_plugin)
-        self.registry.register(self.execute_dynamic_plugin)
+        if self.mode == "proxy":
+            self.registry.register(self.execute_dynamic_plugin)
+        elif self.mode == "hot_swap":
+            self.registry.register(self.load_specific_tool)
+        else:
+            raise ValueError(f"Unexpected ToolManager Mode: {self.mode}")
 
     def _get_module(self, plugin_path: str) -> Any:
         """
@@ -95,26 +116,23 @@ class ToolManager(Generic[R]):
         """
         Lists categories (directories) and available modules (.py files) in the tools directory.
 
-        Args:
-            path: The sub-directory to browse.
-
         Returns:
             A string listing directories and modules.
         """
         target = self.tools_dir / path
-        logger.debug("Browsing tools directory '%s' with path '%s'.", self.tools_dir, path)
+        logger.debug(f"Browsing tools directory '{self.tools_dir}' with path '{path}'.", self.tools_dir, path)
 
         # Security check to prevent traversing up
         try:
             target.resolve().relative_to(self.tools_dir.resolve())
         except ValueError:
-            msg = "Error: Access denied. Cannot browse outside tools directory."
+            msg = f"Error: Access denied. Cannot browse outside tools directory. Use the following path: '{self.tools_dir}' to browse your tools."
             logger.warning("Browse denied for path '%s'.", path)
             return msg
 
         if not target.exists():
-            msg = "Error: Path not found."
-            logger.warning("Browse path not found: '%s'.", target)
+            msg = f"Error: Path not found. Use the following path: '{self.tools_dir}' to browse your tools."
+            logger.warning(f"Browse path not found: {target}")
             return msg
 
         entries = []
@@ -125,12 +143,14 @@ class ToolManager(Generic[R]):
                 elif item.suffix == ".py" and not item.name.startswith("_"):
                     entries.append(f"[MOD] {item.stem}")
         except Exception as e:
-            msg = f"Error browsing directory: {e}"
+            msg = f"Error browsing directory: {e}. Use the following path: '{self.tools_dir}' to browse your tools."
             logger.error(msg, exc_info=True)
             return msg
 
         if not entries:
-            logger.info("Tools directory is empty at '%s'.", target)
+            logger.info(
+                f"Tools directory is empty at {target}. Make sure you are using the correct path: {self.tools_dir} to browse your tools"
+            )
             return "Directory is empty."
 
         return "\n".join(sorted(entries))
@@ -140,9 +160,6 @@ class ToolManager(Generic[R]):
     ) -> str:
         """
         Scans a module for functions that can be loaded as tools.
-
-        Args:
-            plugin_path: The dotted path to the module.
 
         Returns:
             A list of available tools in the module with their descriptions.
@@ -155,9 +172,13 @@ class ToolManager(Generic[R]):
                 # We look for functions with docstrings (ToolRegistry standard)
                 if not name.startswith("_") and obj.__doc__:
                     # Get first line of docstring
-                    doc_first_line = obj.__doc__.strip().splitlines()[0]
-                    tools.append(f"- {name}: {doc_first_line}")
+                    try:
+                        tool_def = self.registry._generate_tool_definition(obj)
+                        schema_str = json.dumps(tool_def.parameters)
+                    except Exception:
+                        schema_str = "Konnte Schema nicht extrahieren"
 
+                    tools.append(f"- {name}: {obj.__doc__}\n  Expected kwargs_json Format: {schema_str}")
             if not tools:
                 logger.info("No tools found in '%s'.", plugin_path)
                 return f"No tools found in '{plugin_path}'."
@@ -172,14 +193,9 @@ class ToolManager(Generic[R]):
         self,
         plugin_path: Annotated[str, Field(description="Dotted path to the module")],
         function_name: Annotated[str, Field(description="Name of the function to execute")],
-        kwargs_json: Annotated[str, Field(description="JSON string of the function's arguments")],
+        kwargs_json: Annotated[dict[str, Any], Field(description="JSON string of the function's arguments")],
     ) -> str:
-        """    Executes a function from a dynamic plugin module.
-
-        Args:
-            plugin_path: The dotted path to the module containing the function.
-            function_name: The name of the function to execute.
-            kwargs_json: A JSON string representing the keyword arguments for the function.
+        """Executes a function from a dynamic plugin module.
 
         Returns:
             The result of the function execution as a string, or an error message.
@@ -189,7 +205,7 @@ class ToolManager(Generic[R]):
 
         logger.info("Executing dynamic tool '%s' from '%s'.", function_name, plugin_path)
         try:
-            kwargs = json.loads(kwargs_json)
+            kwargs = json.loads(kwargs_json)  # type: ignore
         except json.JSONDecodeError as e:
             msg = f"Error parsing the arguments: {e}"
             logger.error(msg)
@@ -221,10 +237,6 @@ class ToolManager(Generic[R]):
     ) -> str:
         """
         Loads a specific function from a module into the registry.
-
-        Args:
-            plugin_path: The dotted path to the module.
-            function_name: The name of the function to load.
 
         Returns:
             Success or error message.

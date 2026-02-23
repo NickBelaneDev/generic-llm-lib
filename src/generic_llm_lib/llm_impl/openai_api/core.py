@@ -223,7 +223,7 @@ class GenericOpenAI(GenericLLM[ChatCompletion]):
             client=self.client,
             model=self.model,
             messages=messages,
-            tools=tools,
+            registry=self.registry,
             temperature=self.temperature,
             max_tokens=self.max_tokens,
         )

@@ -8,7 +8,7 @@ from .exceptions import (
     ToolNotFoundError,
     ToolExecutionError,
     ToolValidationError,
-    ToolLoadError
+    ToolLoadError,
 )
 from .tools.models import ToolDefinition
 from .logger import get_logger, setup_logging
@@ -50,5 +50,5 @@ __all__ = [
     "ToolExecutionLoop",
     "SchemaValidator",
     "ScopedTool",
-    "ToolManager"
+    "ToolManager",
 ]

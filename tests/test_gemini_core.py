@@ -10,6 +10,7 @@ from google.genai.client import AsyncClient
 
 load_dotenv(find_dotenv())
 
+
 @pytest.mark.asyncio
 async def test_generic_gemini_initialization(genai_client: AsyncClient) -> None:
     gemini = GenericGemini(aclient=genai_client, model_name="gemini-2.5-flash", sys_instruction="You are a helper.")

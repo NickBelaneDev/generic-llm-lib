@@ -16,6 +16,7 @@ class ChatResult(BaseModel, Generic[ProviderResT]):
         history: Updated conversation history in provider-agnostic format.
         raw: Provider-specific response payload for advanced use cases.
     """
+
     content: str
     history: List[BaseMessage]
     raw: ProviderResT

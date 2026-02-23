@@ -68,6 +68,7 @@ def openai_mock_tool_manager() -> ToolManager[OpenAIToolRegistry]:
     # 3. Zwinge den Typ-Checker, den Mock als instanziierten Generic zu akzeptieren
     return cast(ToolManager[OpenAIToolRegistry], manager_mock)
 
+
 @pytest.fixture(scope="session")
 def vcr_config() -> dict[str, Any]:
     return {

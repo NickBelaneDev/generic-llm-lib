@@ -7,7 +7,6 @@ from generic_llm_lib.llm_core import ToolExecutionLoop, ToolCallRequest, ToolCal
 from generic_llm_lib import OpenAIToolRegistry
 
 
-
 class SampleArgs(BaseModel):
     required_value: int
 

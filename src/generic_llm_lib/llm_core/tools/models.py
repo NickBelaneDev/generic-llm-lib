@@ -1,4 +1,3 @@
-
 """Tool model definitions for the LLM tool system."""
 
 from typing import Optional, Any, Callable, Type
