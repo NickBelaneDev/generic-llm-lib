@@ -1,3 +1,5 @@
+"""Logging utilities for the generic LLM library."""
+
 import logging
 import sys
 

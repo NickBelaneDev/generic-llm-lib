@@ -1,3 +1,5 @@
+"""Tool registry abstraction and helper utilities."""
+
 from abc import abstractmethod, ABC
 from typing import Callable, Dict, Any, Union, Optional, get_origin, Annotated, get_args, cast
 
@@ -77,8 +79,13 @@ class ToolRegistry(ABC):
         logger.info(f"Successfully registered tool: '{tool.name}'")
 
     def unregister(self, tool_name: str) -> None:
-        """
-        Unregister a tool from the registry.
+        """Unregister a tool from the registry.
+
+        Args:
+            tool_name: The name of the tool to remove.
+
+        Raises:
+            ToolNotFoundError: If the tool does not exist in the registry.
         """
         if tool_name in self.tools:
             del self.tools[tool_name]

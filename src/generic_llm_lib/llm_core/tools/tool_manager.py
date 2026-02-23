@@ -32,6 +32,12 @@ class ToolManager(Generic[R]):
         self.registry = registry
         self.tools_dir = Path(tools_dir)
         self._module_cache: Dict[str, Any] = {}
+        self._register_default_tools()
+
+    def _register_default_tools(self):
+        self.registry.register(self.browse_plugins)
+        self.registry.register(self.inspect_plugin)
+        self.registry.register(self.execute_dynamic_plugin)
 
     def _get_module(self, plugin_path: str) -> Any:
         """
@@ -168,6 +174,17 @@ class ToolManager(Generic[R]):
         function_name: Annotated[str, Field(description="Name of the function to execute")],
         kwargs_json: Annotated[str, Field(description="JSON string of the function's arguments")],
     ) -> str:
+        """    Executes a function from a dynamic plugin module.
+
+        Args:
+            plugin_path: The dotted path to the module containing the function.
+            function_name: The name of the function to execute.
+            kwargs_json: A JSON string representing the keyword arguments for the function.
+
+        Returns:
+            The result of the function execution as a string, or an error message.
+        """
+
         from generic_llm_lib.llm_core.tools.scoped_tool import ScopedTool
 
         logger.info("Executing dynamic tool '%s' from '%s'.", function_name, plugin_path)

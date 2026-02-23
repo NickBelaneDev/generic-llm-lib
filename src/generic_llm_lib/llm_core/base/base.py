@@ -1,3 +1,5 @@
+"""Core abstractions for LLM provider implementations."""
+
 from typing import List, Optional, TypeVar, Generic
 from abc import ABC, abstractmethod
 from generic_llm_lib.llm_core.messages.models import BaseMessage
@@ -7,15 +9,23 @@ ProviderResT = TypeVar("ProviderResT")
 
 
 class ChatResult(BaseModel, Generic[ProviderResT]):
+    """Normalized chat output returned by provider implementations.
+
+    Attributes:
+        content: Text content returned by the provider.
+        history: Updated conversation history in provider-agnostic format.
+        raw: Provider-specific response payload for advanced use cases.
+    """
     content: str
     history: List[BaseMessage]
     raw: ProviderResT
 
 
 class GenericLLM(ABC, Generic[ProviderResT]):
-    """
-    Abstract Base Class for Generic LLM implementations.
-    Defines the standard interface for chatting and asking questions.
+    """Abstract base class for LLM implementations.
+
+    Implementations should return provider-specific data via ``ChatResult.raw`` while
+    keeping ``ChatResult.content`` and ``ChatResult.history`` consistent for consumers.
     """
 
     @abstractmethod

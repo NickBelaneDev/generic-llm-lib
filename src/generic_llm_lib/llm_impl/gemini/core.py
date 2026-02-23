@@ -60,9 +60,9 @@ class GenericGemini(GenericLLM[GenerateContentResponse]):
             self.registry = GeminiToolRegistry()
 
         self._tool_loop = ToolExecutionLoop(
-            registry=registry,
-            max_function_loops=max_function_loops,
-            tool_timeout=tool_timeout,
+            registry=self.registry,
+            max_function_loops=self.max_function_loops,
+            tool_timeout=self.tool_timeout,
         )
 
         # Only include tools if there are any registered

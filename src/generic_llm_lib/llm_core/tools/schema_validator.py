@@ -1,3 +1,5 @@
+"""Schema validation helpers for LLM tool parameter schemas."""
+
 from typing import Any, Dict, Set
 
 from generic_llm_lib.llm_core.exceptions.exceptions import ToolValidationError

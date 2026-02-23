@@ -1,3 +1,5 @@
+"""Public exports for the core LLM abstractions and utilities."""
+
 from .base import GenericLLM, ChatResult
 from .tools import ToolRegistry
 from .exceptions import (
