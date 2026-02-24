@@ -8,9 +8,9 @@ from typing import Annotated, Any, Dict, TypeVar, Generic, Literal
 
 from pydantic import Field
 
-from generic_llm_lib.llm_core import ToolLoadError
-from generic_llm_lib.llm_core import ToolRegistry
-from generic_llm_lib.llm_core.logger import get_logger
+from ...exceptions import ToolLoadError
+from ..registry import ToolRegistry
+from ...logger import get_logger
 
 logger = get_logger(__name__)
 R = TypeVar("R", bound=ToolRegistry)
@@ -201,7 +201,7 @@ class ToolManager(Generic[R]):
             The result of the function execution as a string, or an error message.
         """
 
-        from generic_llm_lib.llm_core.tools.scoped_tool import ScopedTool
+        from .scoped_tool import ScopedTool
 
         logger.info("Executing dynamic tool '%s' from '%s'.", function_name, plugin_path)
         try:

@@ -3,18 +3,17 @@ from openai.types.chat import ChatCompletion, ChatCompletionToolParam
 from typing import List, Tuple, Optional, Any, Dict, Iterable, cast
 import logging
 from generic_llm_lib.llm_core import GenericLLM
-from generic_llm_lib.llm_core import ToolExecutionLoop
-from generic_llm_lib.llm_core.messages.models import (
+from generic_llm_lib.llm_core.tools import ToolExecutionLoop, ToolManager
+from generic_llm_lib.llm_core.messages import (
     BaseMessage,
     UserMessage,
     AssistantMessage,
     SystemMessage,
     ToolMessage,
 )
-from generic_llm_lib.llm_core.base.base import ChatResult
+from generic_llm_lib.llm_core.base import ChatResult
 from .adapter import OpenAIToolAdapter
 from .registry import OpenAIToolRegistry
-from ...llm_core.tools.tool_manager import ToolManager
 
 logger = logging.getLogger(__name__)
 

@@ -6,8 +6,8 @@ from __future__ import annotations
 from types import TracebackType
 from typing import TYPE_CHECKING
 
-from generic_llm_lib.llm_core.logger import get_logger
-from ..exceptions.exceptions import ToolLoadError
+from ...logger import get_logger
+from ...exceptions import ToolLoadError
 
 if TYPE_CHECKING:
     from .tool_manager import ToolManager

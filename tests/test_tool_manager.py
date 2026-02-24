@@ -1,7 +1,8 @@
 import pytest
 from unittest.mock import MagicMock
-from generic_llm_lib import ToolManager, ToolRegistry
-from generic_llm_lib.llm_core import ToolRegistrationError, ToolLoadError
+from generic_llm_lib import ToolRegistry
+from generic_llm_lib.llm_core.tools import ToolManager
+from generic_llm_lib.llm_core.exceptions import ToolRegistrationError, ToolLoadError
 
 # --- Fixtures ---
 

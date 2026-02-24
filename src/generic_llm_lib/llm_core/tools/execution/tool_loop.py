@@ -7,11 +7,11 @@ import inspect
 import json
 from typing import Any, Callable, Dict, Optional
 
-from generic_llm_lib.llm_core.exceptions.exceptions import ToolExecutionError
-from generic_llm_lib.llm_core.logger import get_logger
+from ...exceptions import ToolExecutionError
+from ...logger import get_logger
 from .adapter import ToolAdapter
-from .call_protocol import ToolCallRequest, ToolCallResult
-from .registry import ToolRegistry
+from ..models import ToolCallRequest, ToolCallResult
+from ..registry import ToolRegistry
 
 logger = get_logger(__name__)
 

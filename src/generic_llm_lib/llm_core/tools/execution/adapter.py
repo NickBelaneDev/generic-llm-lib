@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Protocol, Sequence
 
-from .call_protocol import ToolCallRequest, ToolCallResult
+from ..models import ToolCallRequest, ToolCallResult
 
 
 class ToolAdapter(Protocol):

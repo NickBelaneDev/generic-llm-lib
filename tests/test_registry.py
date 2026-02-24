@@ -2,7 +2,7 @@ import pytest
 from typing import Annotated, List, Optional, Any
 from pydantic import Field, BaseModel
 from generic_llm_lib import ToolRegistry, GeminiToolRegistry, OpenAIToolRegistry
-from generic_llm_lib.llm_core import ToolValidationError
+from generic_llm_lib.llm_core.exceptions import ToolValidationError
 from google.genai import types
 import json
 

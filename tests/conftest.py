@@ -6,7 +6,8 @@ from typing import Any, cast
 from dotenv import load_dotenv, find_dotenv
 from google.genai.client import Client, AsyncClient
 from openai import AsyncOpenAI
-from generic_llm_lib import ToolManager, OpenAIToolRegistry
+from generic_llm_lib.llm_core.tools import ToolManager
+from generic_llm_lib.llm_impl import OpenAIToolRegistry
 
 # Load environment variables from .env file
 # We explicitly look for .env in the project root if find_dotenv() fails or returns empty

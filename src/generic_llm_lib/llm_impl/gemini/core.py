@@ -3,12 +3,13 @@ from typing import List, Tuple, Optional, Any, Sequence
 
 from google.genai.client import AsyncClient
 from google.genai.types import GenerateContentResponse
-from generic_llm_lib.llm_core import GenericLLM, ToolExecutionLoop, get_logger
-from generic_llm_lib.llm_core.messages.models import BaseMessage, UserMessage, AssistantMessage, SystemMessage
-from generic_llm_lib.llm_core.base.base import ChatResult
+from generic_llm_lib.llm_core import GenericLLM, get_logger
+from generic_llm_lib.llm_core.tools import ToolExecutionLoop
+from generic_llm_lib.llm_core.messages import BaseMessage, UserMessage, AssistantMessage, SystemMessage
+from generic_llm_lib.llm_core.base import ChatResult
 from .adapter import GeminiToolAdapter
 from .registry import GeminiToolRegistry
-from ...llm_core.tools.tool_manager import ToolManager
+from generic_llm_lib.llm_core.tools import ToolManager
 
 logger = get_logger(__name__)
 

@@ -2,7 +2,7 @@
 
 from typing import List, Optional, TypeVar, Generic
 from abc import ABC, abstractmethod
-from generic_llm_lib.llm_core.messages.models import BaseMessage
+from ..messages import BaseMessage
 from pydantic import BaseModel
 
 ProviderResT = TypeVar("ProviderResT")

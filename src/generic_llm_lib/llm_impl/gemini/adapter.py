@@ -1,7 +1,7 @@
 from google.genai import types
 from typing import Any, Sequence, cast
 from google.genai.types import GenerateContentResponse
-from generic_llm_lib.llm_core import ToolCallRequest, ToolCallResult, ToolAdapter
+from generic_llm_lib.llm_core.tools import ToolCallRequest, ToolCallResult, ToolAdapter
 from generic_llm_lib.llm_core import get_logger
 
 logger = get_logger(__name__)

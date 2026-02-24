@@ -2,7 +2,8 @@ import pytest
 
 from dotenv import load_dotenv, find_dotenv
 
-from generic_llm_lib import GenericGemini, ChatResult, GeminiToolRegistry, UserMessage, AssistantMessage
+from generic_llm_lib.llm_impl import GenericGemini, GeminiToolRegistry
+from generic_llm_lib.llm_core import ChatResult, UserMessage, AssistantMessage
 
 from typing import Annotated
 from pydantic import Field

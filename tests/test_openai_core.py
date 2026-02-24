@@ -1,6 +1,8 @@
 import pytest
 from openai import AsyncOpenAI
-from generic_llm_lib import GenericOpenAI, ChatResult, OpenAIToolRegistry, UserMessage, AssistantMessage, SystemMessage
+from generic_llm_lib.llm_core.messages import UserMessage, AssistantMessage, SystemMessage
+from generic_llm_lib.llm_core.base import ChatResult
+from generic_llm_lib.llm_impl import GenericOpenAI, OpenAIToolRegistry
 from typing import Annotated
 from pydantic import Field
 from dotenv import load_dotenv, find_dotenv

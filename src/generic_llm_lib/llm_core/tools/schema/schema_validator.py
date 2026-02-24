@@ -2,8 +2,8 @@
 
 from typing import Any, Dict, Set
 
-from generic_llm_lib.llm_core.exceptions.exceptions import ToolValidationError
-from generic_llm_lib.llm_core.logger import get_logger
+from ...exceptions import ToolValidationError
+from ...logger import get_logger
 
 logger = get_logger(__name__)
 

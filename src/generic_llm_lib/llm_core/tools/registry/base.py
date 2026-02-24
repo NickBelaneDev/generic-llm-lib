@@ -1,17 +1,16 @@
 """Tool registry abstraction and helper utilities."""
 
 from abc import abstractmethod, ABC
-from typing import Callable, Dict, Any, Union, Optional, get_origin, Annotated, get_args, cast
+from typing import Callable, Dict, Any, Union, Optional, cast
 
 import jsonref  # type: ignore
-from pydantic.fields import FieldInfo
 from pydantic import create_model
 
-from .models import ToolDefinition
-from ..exceptions.exceptions import ToolNotFoundError
-from ..exceptions.exceptions import ToolRegistrationError, ToolValidationError
-from .schema_validator import SchemaValidator
-from ..logger import get_logger
+from ..models import ToolDefinition
+from ..schema import ToolParameterFactory
+from ...exceptions import ToolNotFoundError, ToolRegistrationError, ToolValidationError
+from ..schema import SchemaValidator
+from ...logger import get_logger
 import inspect
 
 logger = get_logger(__name__)
@@ -93,88 +92,6 @@ class ToolRegistry(ABC):
         else:
             raise ToolNotFoundError(f"Tool '{tool_name}' not found in the registry.")
 
-    @staticmethod
-    def _generate_tool_definition(
-        func: Callable, name: Optional[str] = None, description: Optional[str] = None
-    ) -> ToolDefinition:
-        """Generate a ToolDefinition from a callable function.
-
-        Args:
-            func: The function to generate a definition for.
-            name: Optional name override for the tool.
-            description: Optional description override for the tool.
-
-        Returns:
-            A ToolDefinition object containing the tool's metadata and schema.
-
-        Raises:
-            ToolValidationError: If the function is missing a docstring or parameter descriptions.
-        """
-
-        tool_name = name or func.__name__
-
-        if description is None:
-            doc = inspect.getdoc(func)
-            if not doc:
-                msg = f"Tool '{tool_name}' missing docstring. LLMs need a description of what the tool does."
-                logger.error(msg)
-                raise ToolValidationError(msg)
-            description = doc
-
-        signature = inspect.signature(func)
-        fields: Dict[str, Any] = {}
-
-        for param_name, param in signature.parameters.items():
-            if param_name == "self":
-                continue
-
-            annotation = param.annotation
-            default = param.default
-
-            has_description = False
-
-            # Every Tools parameter needs 'Annotated[<class>, Field(description='...')] = ...' as its annotation
-            if get_origin(annotation) is Annotated:
-                for metadata in get_args(annotation):
-                    if isinstance(metadata, FieldInfo) and metadata.description:
-                        has_description = True
-                        break
-
-            if not has_description:
-                msg = (
-                    f"Parameter '{param_name}' in tool '{tool_name}' is missing a description.\n"
-                    f"Usage: {param_name}: Annotated[Type, Field(description='...')] = ..."
-                )
-                logger.error(msg)
-                raise ToolValidationError(msg)
-
-            pydantic_default = default if default != inspect.Parameter.empty else ...
-            fields[param_name] = (annotation, pydantic_default)
-
-        # We need to cast fields to Any to satisfy mypy's strictness on kwargs unpacking for create_model
-        # create_model expects **field_definitions: Any
-        dynamic_params_model = create_model(f"{tool_name}Params", **cast(Dict[str, Any], fields))
-
-        raw_schema = dynamic_params_model.model_json_schema()
-
-        # 1. Check for recursion
-        SchemaValidator.assert_no_recursive_refs(raw_schema)
-
-        # 2. Resolve refs using jsonref
-        # proxies=False ensures we get a plain dict back, not JsonRef objects
-        parameters_schema = jsonref.replace_refs(raw_schema, proxies=False)
-
-        # 3. Sanitize schema (remove $defs, title, etc.)
-        parameters_schema = SchemaValidator.sanitize_schema(parameters_schema)
-
-        return ToolDefinition(
-            name=tool_name,
-            description=description,
-            func=func,
-            parameters=parameters_schema,
-            args_model=dynamic_params_model,
-        )
-
     def tool(self, func: Callable) -> Callable:
         """A decorator to turn a function into an LLM tool.
 
@@ -205,3 +122,72 @@ class ToolRegistry(ABC):
             A dictionary where keys are tool names and values are the functions.
         """
         return {name: tool.func for name, tool in self.tools.items()}
+
+    def _generate_tool_definition(
+        self, func: Callable, name: Optional[str] = None, description: Optional[str] = None
+    ) -> ToolDefinition:
+        """Generate a ToolDefinition from a callable function.
+
+        Args:
+            func: The function to generate a definition for.
+            name: Optional name override for the tool.
+            description: Optional description override for the tool.
+
+        Returns:
+            A ToolDefinition object containing the tool's metadata and schema.
+
+        Raises:
+            ToolValidationError: If the function is missing a docstring or parameter descriptions.
+        """
+
+        tool_name = name or func.__name__
+        try:
+            if description is None:
+                description = self._get_docstring_from_func(func, tool_name)
+        except ToolValidationError:
+            raise
+
+        signature = inspect.signature(func)
+        fields = self._build_fields(signature, tool_name)
+
+        # We need to cast fields to Any to satisfy mypy's strictness on kwargs unpacking for create_model
+        # create_model expects **field_definitions: Any
+        dynamic_params_model = create_model(f"{tool_name}Params", **cast(Dict[str, Any], fields))
+        raw_schema = dynamic_params_model.model_json_schema()
+        # 1. Check for recursion
+        SchemaValidator.assert_no_recursive_refs(raw_schema)
+
+        # 2. Resolve refs using jsonref
+        # proxies=False ensures we get a plain dict back, not JsonRef objects
+        parameters_schema = jsonref.replace_refs(raw_schema, proxies=False)
+
+        # 3. Sanitize schema (remove $defs, title, etc.)
+        parameters_schema = SchemaValidator.sanitize_schema(parameters_schema)
+
+        return ToolDefinition(
+            name=tool_name,
+            description=description,
+            func=func,
+            parameters=parameters_schema,
+            args_model=dynamic_params_model,
+        )
+
+    @staticmethod
+    def _get_docstring_from_func(func: Callable, tool_name: str) -> str:
+        doc = inspect.getdoc(func)
+        if not doc:
+            msg = f"Tool '{tool_name}' missing docstring. LLMs need a description of what the tool does."
+            logger.error(msg)
+            raise ToolValidationError(msg)
+        return doc
+
+    @staticmethod
+    def _build_fields(signature: inspect.Signature, tool_name: str) -> Dict[str, Any]:
+
+        fields: Dict[str, Any] = {}
+        for param_name, param in signature.parameters.items():
+            if param_name == "self":
+                continue
+            ft = ToolParameterFactory.build_field_tuple(param_name=param_name, param=param, tool_name=tool_name)
+            fields[param_name] = (ft.annotation, ft.field)
+        return fields

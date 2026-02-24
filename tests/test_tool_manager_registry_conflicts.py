@@ -9,8 +9,8 @@ from generic_llm_lib import (
     GenericOpenAI,
     GeminiToolRegistry,
     OpenAIToolRegistry,
-    ToolManager,
 )
+from generic_llm_lib.llm_core.tools import ToolManager
 
 
 def _tool_manager_with_registry(registry: object) -> ToolManager:

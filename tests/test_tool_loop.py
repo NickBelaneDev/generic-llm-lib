@@ -3,7 +3,13 @@ from unittest.mock import AsyncMock
 from pydantic import BaseModel
 from typing import Sequence, Any, Dict, List, Callable, Awaitable, cast
 
-from generic_llm_lib.llm_core import ToolExecutionLoop, ToolCallRequest, ToolCallResult, ToolAdapter, ToolDefinition
+from generic_llm_lib.llm_core.tools import (
+    ToolExecutionLoop,
+    ToolCallRequest,
+    ToolCallResult,
+    ToolAdapter,
+    ToolDefinition,
+)
 from generic_llm_lib import OpenAIToolRegistry
 
 

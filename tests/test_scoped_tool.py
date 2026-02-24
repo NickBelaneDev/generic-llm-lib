@@ -1,10 +1,8 @@
 import pytest
 from unittest.mock import MagicMock
 
-from generic_llm_lib.llm_core import ToolLoadError, ScopedTool
-
-# Angenommen, ScopedTool ist in deiner Codebase importierbar
-# from dynamic_tools.scoped_tool import ScopedTool
+from generic_llm_lib.llm_core.exceptions import ToolLoadError
+from generic_llm_lib.llm_core.tools import ScopedTool
 
 
 @pytest.fixture

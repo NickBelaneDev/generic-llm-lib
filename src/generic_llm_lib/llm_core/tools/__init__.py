@@ -1,9 +1,16 @@
-"""Tools package for LLM Core."""
-
-from .adapter import ToolAdapter
-from .call_protocol import ToolCallRequest, ToolCallResult
+from .models import ToolDefinition, ToolCallRequest, ToolCallResult
 from .registry import ToolRegistry
-from .tool_loop import ToolExecutionLoop
-from .models import ToolDefinition
+from .execution import ToolAdapter, ToolExecutionLoop, ScopedTool, ToolManager
+from .schema import SchemaValidator
 
-__all__ = ["ToolAdapter", "ToolCallRequest", "ToolCallResult", "ToolRegistry", "ToolExecutionLoop", "ToolDefinition"]
+__all__ = [
+    "ToolDefinition",
+    "ToolCallRequest",
+    "ToolCallResult",
+    "ToolRegistry",
+    "ToolAdapter",
+    "ToolExecutionLoop",
+    "ScopedTool",
+    "ToolManager",
+    "SchemaValidator",
+]

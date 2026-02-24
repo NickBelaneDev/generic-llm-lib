@@ -5,9 +5,7 @@ from openai.types.chat import ChatCompletion
 from typing import List, Optional, Any, Dict, Sequence, Iterable, cast, TYPE_CHECKING
 import json
 
-# from generic_llm_lib import OpenAIToolRegistry
-from generic_llm_lib.llm_core.tools.call_protocol import ToolCallRequest, ToolCallResult
-from generic_llm_lib.llm_core.tools.adapter import ToolAdapter
+from generic_llm_lib.llm_core.tools import ToolCallRequest, ToolCallResult, ToolAdapter
 
 if TYPE_CHECKING:
     # we need to typecheck for the OpenAIToolRegistry we are experiencing a circular import

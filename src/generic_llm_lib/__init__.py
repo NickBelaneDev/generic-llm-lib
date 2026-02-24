@@ -1,14 +1,14 @@
+"""Generic LLM Library - A provider-agnostic interface for LLMs and tools."""
+
 from .llm_core import (
     GenericLLM,
     ChatResult,
-    BaseMessage,
     UserMessage,
     AssistantMessage,
     SystemMessage,
     ToolMessage,
     ToolRegistry,
-    ToolManager,
-    ScopedTool,
+    ToolDefinition,
 )
 from .llm_impl.gemini import GenericGemini, GeminiToolRegistry
 from .llm_impl.openai_api import GenericOpenAI, OpenAIToolRegistry
@@ -16,14 +16,12 @@ from .llm_impl.openai_api import GenericOpenAI, OpenAIToolRegistry
 __all__ = [
     "GenericLLM",
     "ChatResult",
-    "BaseMessage",
     "UserMessage",
     "AssistantMessage",
     "SystemMessage",
     "ToolMessage",
     "ToolRegistry",
-    "ToolManager",
-    "ScopedTool",
+    "ToolDefinition",
     "GenericGemini",
     "GeminiToolRegistry",
     "GenericOpenAI",
