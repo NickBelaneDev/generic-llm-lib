@@ -1,9 +1,15 @@
 """Core abstractions for LLM provider implementations."""
 
-from typing import List, Optional, TypeVar, Generic
+import asyncio
+from typing import List, Optional, TypeVar, Generic, Callable, Coroutine, Any
 from abc import ABC, abstractmethod
-from ..messages import BaseMessage
 from pydantic import BaseModel
+from ..messages import BaseMessage
+from ..logger import get_logger
+
+logger = get_logger(__name__)
+
+
 
 ProviderResT = TypeVar("ProviderResT")
 
@@ -29,7 +35,52 @@ class GenericLLM(ABC, Generic[ProviderResT]):
     keeping ``ChatResult.content`` and ``ChatResult.history`` consistent for consumers.
     """
 
-    @abstractmethod
+    def __init__(self, max_retries: int = 3, base_retry_delay: float = 1.0):
+        self.max_retries = max_retries
+        self.base_retry_delay = base_retry_delay
+
+
+    async def _execute_with_retry(
+            self,
+            func: Callable[..., Coroutine[Any, Any, ChatResult[ProviderResT]]],
+            *args,
+            **kwargs
+    ) -> ChatResult[ProviderResT]:
+        """
+        Executes a function with retry logic.
+
+        Args:
+            func: The asynchronous function to execute.
+            *args: Positional arguments for the function.
+            **kwargs: Keyword arguments for the function.
+
+        Returns:
+            The result of the function call.
+
+        Raises:
+            Exception: The last encountered exception if all retries fail.
+            TimeoutError: If the maximum number of retries is exceeded - which actually should not happen...
+        """
+
+        delay = self.base_retry_delay
+        for attempt in range(self.max_retries + 1):
+            try:
+                return await func(*args, **kwargs)
+            except Exception as e:
+                # Here we could check, what kind of error it is.
+
+                if attempt == self.max_retries:
+                    raise e
+
+                logger.warning(f"API Error (Retry: {attempt + 1}/{self.max_retries}): {e}. Waiting {delay}s...")
+                await asyncio.sleep(delay)
+                delay *= 2  # Exponential backoff
+
+        msg = f"Failed to get response after {self.max_retries} retries."
+        logger.error(msg)
+        raise TimeoutError(msg)
+
+
     async def chat(self, history: List[BaseMessage], user_prompt: str) -> ChatResult[ProviderResT]:
         """
         Conducts a chat turn with the LLM.
@@ -42,18 +93,24 @@ class GenericLLM(ABC, Generic[ProviderResT]):
             A provider-specific response object containing the LLM's response
             and updated conversation history.
         """
-        pass
+        return await self._execute_with_retry(self._chat_impl, history, user_prompt)
 
-    @abstractmethod
-    async def ask(self, prompt: str, model: Optional[str] = None) -> ChatResult[ProviderResT]:
+    async def ask(self, prompt: str) -> ChatResult[ProviderResT]:
         """
         Single-turn question without maintaining history.
 
         Args:
             prompt: The question to ask.
-            model: Optional model override.
 
         Returns:
             A provider-specific response object containing the LLM's response.
         """
+        return await self._execute_with_retry(self._ask_impl,prompt)
+
+    @abstractmethod
+    async def _chat_impl(self, history: List[BaseMessage], user_prompt: str) -> ChatResult[ProviderResT]:
+        pass
+
+    @abstractmethod
+    async def _ask_impl(self, prompt: str, model: Optional[str] = None) -> ChatResult[ProviderResT]:
         pass
