@@ -49,6 +49,7 @@ class GenericOpenAI(GenericLLM[ChatCompletion]):
             max_function_loops: The maximum number of consecutive function calls the LLM can make.
             tool_timeout: The maximum time in seconds to wait for a tool execution.
         """
+        super().__init__()
         self.model: str = model_name
         self.registry: Optional[OpenAIToolRegistry] | None = registry
         self.max_function_loops = max_function_loops
@@ -75,14 +76,13 @@ class GenericOpenAI(GenericLLM[ChatCompletion]):
             argument_error_formatter=self._format_argument_error,
         )
 
-    async def ask(self, prompt: str, model: Optional[str] = None) -> ChatResult[ChatCompletion]:
+    async def _ask_impl(self, prompt: str) -> ChatResult[ChatCompletion]:
         """
         Generates a text response from the LLM based on a single prompt.
         This method handles potential function calls internally by initiating a temporary chat session.
 
         Args:
             prompt: The user's input prompt.
-            model: Optional. Overrides the default model for this specific request.
 
         Returns:
             ChatResult[ChatCompletion]: The generated text response from the LLM.
@@ -90,9 +90,9 @@ class GenericOpenAI(GenericLLM[ChatCompletion]):
         # We use a temporary chat session to handle the tool execution loop (Model -> Tool -> Model)
         # We start with an empty history.
         # logger.debug(f"ask() called with prompt: {prompt}")
-        return await self.chat([], prompt)
+        return await self._chat_impl([], prompt)
 
-    async def chat(
+    async def _chat_impl(
         self, history: List[BaseMessage], user_prompt: str, clean_history: bool = False
     ) -> ChatResult[ChatCompletion]:
         """

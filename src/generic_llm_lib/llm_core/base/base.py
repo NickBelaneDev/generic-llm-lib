@@ -112,5 +112,5 @@ class GenericLLM(ABC, Generic[ProviderResT]):
         pass
 
     @abstractmethod
-    async def _ask_impl(self, prompt: str, model: Optional[str] = None) -> ChatResult[ProviderResT]:
+    async def _ask_impl(self, prompt: str) -> ChatResult[ProviderResT]:
         pass

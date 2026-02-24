@@ -45,6 +45,7 @@ class GenericGemini(GenericLLM[GenerateContentResponse]):
             max_function_loops: The maximum number of consecutive function calls the LLM can make.
             tool_timeout: The maximum time in seconds to wait for a tool execution.
         """
+        super().__init__()
         self.model: str = model_name
 
         self.max_function_loops = max_function_loops
@@ -81,22 +82,19 @@ class GenericGemini(GenericLLM[GenerateContentResponse]):
         self.client: AsyncClient = aclient
         logger.info(f"Initialized GenericGemini with model='{model_name}', temp={temp}, max_tokens={max_tokens}")
 
-    async def ask(self, prompt: str, model: Optional[str] = None) -> ChatResult[GenerateContentResponse]:
+    async def _ask_impl(self, prompt: str) -> ChatResult[GenerateContentResponse]:
         """
         Generates a text response from the LLM based on a single prompt.
         This method handles potential function calls internally by initiating a temporary chat session.
 
         Args:
             prompt: The user's input prompt.
-            model: Optional. Overrides the default model for this specific request.
 
         Returns:
             GeminiMessageResponse: The generated text response from the LLM.
         """
-        if not model:
-            model = self.model
 
-        logger.debug(f"Asking Gemini (model={model}): {prompt[:50]}...")
+        logger.debug(f"Asking Gemini: {prompt[:50]}...")
 
         # We use a temporary chat session to handle the tool execution loop (Model -> Tool -> Model)
         # We start with an empty history.
@@ -104,7 +102,7 @@ class GenericGemini(GenericLLM[GenerateContentResponse]):
 
         return response
 
-    async def chat(
+    async def _chat_impl(
         self, history: List[BaseMessage], user_prompt: str, clean_history: bool = False
     ) -> ChatResult[GenerateContentResponse]:
         """
