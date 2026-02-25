@@ -29,25 +29,25 @@ interactions:
       string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
         [\n          {\n            \"functionCall\": {\n              \"name\": \"get_current_time\",\n
         \             \"args\": {}\n            },\n            \"thoughtSignature\":
-        \"CskBAb4+9vvsJaSBF/jJhSoilj6we71Z5vbb4ecPV77XtIfu06OpEYERSWBk/JFpIH5WVVdSV1/w0ielMeMeypQHHjbdFq7bk5WUOoNNJ9Nx0hkhapoEtqxi/x8JSsdbRTh/u2j64nVAo5H98prFABc02eoeg+PyvouTLIaGQAq/10dLp3kWUvwSLclQux9M7QP9XilB/F248IuTD8FIQx2LzqQqBwR6MkUae9cyyC/GsTx+DRZ+33u6QcOAn4G2PBIxXtIQxIRHOJFf\"\n
+        \"CsQBAb4+9vt8MI+VBxlPzskGG8zAxi0tn4aE8Bo/NX/UClNzC2+jNGHJEM4Dj9YvA2D0sqEi+TTVPCOpnwA9yzH45LaZVjfDyomBj3lbm8F0hTxYYaESCKnQyiZIRUCDJbR+hemFXsEoCXsW/ejFlQAoPbPWG9r5aeRVfK0bUNI+ohQ32YQhunrSVhq85NqCzCBhzlI36JWTN3tnm0uVKxZm16cpH5LjNU7Hd9Tlkoz5E76IrkFtT5Sd8PiyAReZ8moPetVotg==\"\n
         \         }\n        ],\n        \"role\": \"model\"\n      },\n      \"finishReason\":
         \"STOP\",\n      \"index\": 0,\n      \"finishMessage\": \"Model generated
         function call(s).\"\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
         41,\n    \"candidatesTokenCount\": 12,\n    \"totalTokenCount\": 91,\n    \"promptTokensDetails\":
         [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 41\n
         \     }\n    ],\n    \"thoughtsTokenCount\": 38\n  },\n  \"modelVersion\":
-        \"gemini-2.5-flash\",\n  \"responseId\": \"QCWKae2hJ_7xxN8PyrOo4A4\"\n}\n"
+        \"gemini-2.5-flash\",\n  \"responseId\": \"szeeaaeuGcn-nsEPjqfoYA\"\n}\n"
     headers:
       Alt-Svc:
       - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Mon, 09 Feb 2026 18:19:44 GMT
+      - Tue, 24 Feb 2026 23:43:48 GMT
       Server:
       - scaffolding on HTTPServer2
       Server-Timing:
-      - gfet4t7; dur=655
+      - gfet4t7; dur=707
       Transfer-Encoding:
       - chunked
       Vary:
@@ -61,14 +61,14 @@ interactions:
       X-XSS-Protection:
       - '0'
       content-length:
-      - '998'
+      - '993'
     status:
       code: 200
       message: OK
 - request:
     body: '{"contents": [{"parts": [{"text": "What time is it?"}], "role": "user"},
       {"parts": [{"functionCall": {"args": {}, "name": "get_current_time"}, "thoughtSignature":
-      "CskBAb4-9vvsJaSBF_jJhSoilj6we71Z5vbb4ecPV77XtIfu06OpEYERSWBk_JFpIH5WVVdSV1_w0ielMeMeypQHHjbdFq7bk5WUOoNNJ9Nx0hkhapoEtqxi_x8JSsdbRTh_u2j64nVAo5H98prFABc02eoeg-PyvouTLIaGQAq_10dLp3kWUvwSLclQux9M7QP9XilB_F248IuTD8FIQx2LzqQqBwR6MkUae9cyyC_GsTx-DRZ-33u6QcOAn4G2PBIxXtIQxIRHOJFf"}],
+      "CsQBAb4-9vt8MI-VBxlPzskGG8zAxi0tn4aE8Bo_NX_UClNzC2-jNGHJEM4Dj9YvA2D0sqEi-TTVPCOpnwA9yzH45LaZVjfDyomBj3lbm8F0hTxYYaESCKnQyiZIRUCDJbR-hemFXsEoCXsW_ejFlQAoPbPWG9r5aeRVfK0bUNI-ohQ32YQhunrSVhq85NqCzCBhzlI36JWTN3tnm0uVKxZm16cpH5LjNU7Hd9Tlkoz5E76IrkFtT5Sd8PiyAReZ8moPetVotg=="}],
       "role": "model"}, {"parts": [{"functionResponse": {"name": "get_current_time",
       "response": {"result": "It is 12:00 PM."}}}], "role": "user"}], "systemInstruction":
       {"parts": [{"text": "You are a helpful assistant."}], "role": "user"}, "tools":
@@ -83,7 +83,7 @@ interactions:
       Connection:
       - keep-alive
       Content-Length:
-      - '903'
+      - '899'
       Content-Type:
       - application/json
       Host:
@@ -103,18 +103,18 @@ interactions:
         79,\n    \"candidatesTokenCount\": 10,\n    \"totalTokenCount\": 89,\n    \"promptTokensDetails\":
         [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 79\n
         \     }\n    ]\n  },\n  \"modelVersion\": \"gemini-2.5-flash\",\n  \"responseId\":
-        \"QSWKaYWhEdTAxN8P6OGXkQ0\"\n}\n"
+        \"tDeeaZC2M5mJ-sAP8LG8sQk\"\n}\n"
     headers:
       Alt-Svc:
       - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Mon, 09 Feb 2026 18:19:45 GMT
+      - Tue, 24 Feb 2026 23:43:49 GMT
       Server:
       - scaffolding on HTTPServer2
       Server-Timing:
-      - gfet4t7; dur=546
+      - gfet4t7; dur=1152
       Transfer-Encoding:
       - chunked
       Vary:

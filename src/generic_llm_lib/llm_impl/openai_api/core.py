@@ -76,22 +76,6 @@ class GenericOpenAI(GenericLLM[ChatCompletion]):
             argument_error_formatter=self._format_argument_error,
         )
 
-    async def _ask_impl(self, prompt: str) -> ChatResult[ChatCompletion]:
-        """
-        Generates a text response from the LLM based on a single prompt.
-        This method handles potential function calls internally by initiating a temporary chat session.
-
-        Args:
-            prompt: The user's input prompt.
-
-        Returns:
-            ChatResult[ChatCompletion]: The generated text response from the LLM.
-        """
-        # We use a temporary chat session to handle the tool execution loop (Model -> Tool -> Model)
-        # We start with an empty history.
-        # logger.debug(f"ask() called with prompt: {prompt}")
-        return await self._chat_impl([], prompt)
-
     async def _chat_impl(
         self, history: List[BaseMessage], user_prompt: str, clean_history: bool = False
     ) -> ChatResult[ChatCompletion]:
@@ -114,7 +98,7 @@ class GenericOpenAI(GenericLLM[ChatCompletion]):
               and any tool calls/responses.
             - The raw ChatCompletion object.
         """
-        # logger.debug(f"chat() called. History length: {len(history)}, User prompt: {user_prompt}")
+        logger.debug(f"chat() called. History length: {len(history)}, User prompt: {user_prompt}")
 
         # Convert generic history to OpenAI specific history
         openai_history = self._convert_history(history)
@@ -131,11 +115,11 @@ class GenericOpenAI(GenericLLM[ChatCompletion]):
         tools: Iterable[ChatCompletionToolParam] | None = None
         if self.registry:
             tools = self.registry.tool_object
-
-            # logger.debug(f"Tools registered: {[t.get('function', {}).get('name') for t in tools]}")
+            if tools:
+                logger.debug(f"Tools registered: {[t.get('function', {}).get('name') for t in tools]}")
 
         # Initial call to OpenAI
-        # logger.debug(f"Sending initial request to OpenAI model: {self.model}")
+        logger.debug(f"Sending initial request to OpenAI model: {self.model}")
         response = await self.client.chat.completions.create(
             model=self.model,
             messages=cast(Iterable[Any], messages),
@@ -145,10 +129,10 @@ class GenericOpenAI(GenericLLM[ChatCompletion]):
         )
 
         if not response.choices:
-            # logger.debug(f"Initial response has no choices. Response dump: {response.model_dump()}")
+            logger.debug(f"Initial response has no choices. Response dump: {response.model_dump()}")
             pass
         else:
-            # logger.debug(f"Initial response received. Finish reason: {response.choices[0].finish_reason}")
+            logger.debug(f"Initial response received. Finish reason: {response.choices[0].finish_reason}")
             pass
 
         messages, final_response = await self._handle_function_calls(messages, response, tools)

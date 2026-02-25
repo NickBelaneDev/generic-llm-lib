@@ -1,14 +1,13 @@
 """Core abstractions for LLM provider implementations."""
 
 import asyncio
-from typing import List, Optional, TypeVar, Generic, Callable, Coroutine, Any
+from typing import List, TypeVar, Generic, Callable, Coroutine, Any
 from abc import ABC, abstractmethod
 from pydantic import BaseModel
 from ..messages import BaseMessage
 from ..logger import get_logger
 
 logger = get_logger(__name__)
-
 
 
 ProviderResT = TypeVar("ProviderResT")
@@ -39,12 +38,8 @@ class GenericLLM(ABC, Generic[ProviderResT]):
         self.max_retries = max_retries
         self.base_retry_delay = base_retry_delay
 
-
     async def _execute_with_retry(
-            self,
-            func: Callable[..., Coroutine[Any, Any, ChatResult[ProviderResT]]],
-            *args,
-            **kwargs
+        self, func: Callable[..., Coroutine[Any, Any, ChatResult[ProviderResT]]], *args: Any, **kwargs: dict[str, Any]
     ) -> ChatResult[ProviderResT]:
         """
         Executes a function with retry logic.
@@ -80,7 +75,6 @@ class GenericLLM(ABC, Generic[ProviderResT]):
         logger.error(msg)
         raise TimeoutError(msg)
 
-
     async def chat(self, history: List[BaseMessage], user_prompt: str) -> ChatResult[ProviderResT]:
         """
         Conducts a chat turn with the LLM.
@@ -105,12 +99,8 @@ class GenericLLM(ABC, Generic[ProviderResT]):
         Returns:
             A provider-specific response object containing the LLM's response.
         """
-        return await self._execute_with_retry(self._ask_impl,prompt)
+        return await self.chat([], prompt)
 
     @abstractmethod
     async def _chat_impl(self, history: List[BaseMessage], user_prompt: str) -> ChatResult[ProviderResT]:
-        pass
-
-    @abstractmethod
-    async def _ask_impl(self, prompt: str) -> ChatResult[ProviderResT]:
         pass

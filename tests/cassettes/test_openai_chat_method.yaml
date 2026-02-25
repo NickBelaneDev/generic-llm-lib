@@ -38,13 +38,21 @@ interactions:
     uri: http://192.168.178.97:1234/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-5ja7xb32x6868adqbwp0t\",\n  \"object\": \"chat.completion\",\n
-        \ \"created\": 1770661187,\n  \"model\": \"openai/gpt-oss-20b\",\n  \"choices\":
+      string: "{\n  \"id\": \"chatcmpl-beqf4ozxzblh0zz5kkg019\",\n  \"object\": \"chat.completion\",\n
+        \ \"created\": 1771976633,\n  \"model\": \"openai/gpt-oss-20b\",\n  \"choices\":
         [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n
-        \       \"content\": \"Hello! How can I help you today?\",\n        \"reasoning\":
-        \"Just greet.\",\n        \"tool_calls\": []\n      },\n      \"logprobs\":
-        null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-        80,\n    \"completion_tokens\": 22,\n    \"total_tokens\": 102\n  },\n  \"stats\":
+        \       \"content\": \"Hi there! \U0001F44B How can I help you today?\",\n
+        \       \"reasoning\": \"We have a conversation:\\n\\nUser says: \\\"Hi\\\"\\n\\nThe
+        assistant is to respond. The user just says hi, we can greet them back and
+        ask how can we help. There's no instruction to do anything else; the user
+        just says hi.\\n\\nWe need to produce a response that is appropriate. There's
+        no additional instructions, but the system says: \\\"You are ChatGPT, a large
+        language model trained by OpenAI. Knowledge cutoff 2024-06.\\\" The developer
+        says: \\\"You are a helper.\\\"\\n\\nSo we just respond in a friendly manner.
+        There's no particular constraints.\\n\\nThus: \\\"Hello! How can I help you
+        today?\\\"\",\n        \"tool_calls\": []\n      },\n      \"logprobs\": null,\n
+        \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        80,\n    \"completion_tokens\": 150,\n    \"total_tokens\": 230\n  },\n  \"stats\":
         {},\n  \"system_fingerprint\": \"openai/gpt-oss-20b\"\n}"
     headers:
       Access-Control-Allow-Headers:
@@ -54,13 +62,13 @@ interactions:
       Connection:
       - keep-alive
       Content-Length:
-      - '567'
+      - '1147'
       Content-Type:
       - application/json; charset=utf-8
       Date:
-      - Mon, 09 Feb 2026 18:19:47 GMT
+      - Tue, 24 Feb 2026 23:43:55 GMT
       ETag:
-      - W/"237-2NZWB7ITYNXiY/MAFVVph5hZfY8"
+      - W/"47b-sGzBW54cR9e12xVnitm3chFRA7w"
       Keep-Alive:
       - timeout=5
       X-Powered-By:

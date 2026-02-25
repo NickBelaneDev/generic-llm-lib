@@ -48,10 +48,10 @@ def genai_client() -> AsyncClient:
 
 @pytest.fixture
 def openai_client() -> AsyncOpenAI:
-    api_key = os.getenv("OPENAI_API_KEY")
+    api_key = os.getenv("LOCAL_PENAI_API_KEY")
     if not api_key:
         api_key = "dummy_key"
-    return AsyncOpenAI(api_key=api_key, base_url=os.getenv("OPENAI_BASE_URL"))
+    return AsyncOpenAI(api_key=api_key, base_url=os.getenv("LOCAL_OPENAI_BASE_URL"))
 
 
 @pytest.fixture

@@ -31,25 +31,25 @@ interactions:
       string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
         [\n          {\n            \"functionCall\": {\n              \"name\": \"get_weather\",\n
         \             \"args\": {\n                \"location\": \"Berlin\"\n              }\n
-        \           },\n            \"thoughtSignature\": \"CvYBAb4+9vvnHrLDWgkForkASuiZENmtZubXganbnSxPRY+BzjBVAUGnb28JAoxq7O7+7aMM2HrdgO3fvPqAi0NTJLBp+Bv3M3ZN95O8Ijj63zOSFaF/rGlYJvWj5Pwht3Kc75b99ySFMEpXPMim/zx8/gtZkvPlL9RHqPHWkvLu+9kunHc+WUpIEJt9iJ43u3q8y8K1cQB9j+rf8HhjtcbXqgwUrhpk3VE6d9qfb+gJZQemYEmGaXERIzIr4R9XlMSRHVdOCYtYp6b8w+HZjHqNpHLYAM6c+zgkd0wfTkWsdsRzfFJpPqNQnLmIv682XE8FWW7bNETG\"\n
+        \           },\n            \"thoughtSignature\": \"Cu0BAb4+9vs4yn/0X70fxIjHvJM1Hw3f3WioIw29grr22X04el9m3W9deNPi0Ye+0AYH88oXMFsRK7SkHRyhmp8ut0Am/TEqgBfgj3TyJrZw4j2gWi5esXEZzK3SqwDUP5j5sNZGdpanKK/cs2sZwnSijr9v1kZoTbhERuLcQarq9dLIRQsDKRaBahadzR3usdgv7BBEJI3EYMR62c/y2DydAK6beo34x8ClA+krWF74wkc7XaGG65cUryQCl6gYVhkMK5YQjJZ7rwmUZqjL2Jm7McSB3jR1Yh78YDk8blYnWWQaBViUstaL0tbcvUrx\"\n
         \         }\n        ],\n        \"role\": \"model\"\n      },\n      \"finishReason\":
         \"STOP\",\n      \"index\": 0,\n      \"finishMessage\": \"Model generated
         function call(s).\"\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
-        61,\n    \"candidatesTokenCount\": 15,\n    \"totalTokenCount\": 125,\n    \"promptTokensDetails\":
+        61,\n    \"candidatesTokenCount\": 15,\n    \"totalTokenCount\": 123,\n    \"promptTokensDetails\":
         [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 61\n
-        \     }\n    ],\n    \"thoughtsTokenCount\": 49\n  },\n  \"modelVersion\":
-        \"gemini-2.5-flash\",\n  \"responseId\": \"PyWKadvaDPz-vdIP5eexgAg\"\n}\n"
+        \     }\n    ],\n    \"thoughtsTokenCount\": 47\n  },\n  \"modelVersion\":
+        \"gemini-2.5-flash\",\n  \"responseId\": \"sTeeaee3FN-ikdUPqe2G4A8\"\n}\n"
     headers:
       Alt-Svc:
       - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Mon, 09 Feb 2026 18:19:43 GMT
+      - Tue, 24 Feb 2026 23:43:46 GMT
       Server:
       - scaffolding on HTTPServer2
       Server-Timing:
-      - gfet4t7; dur=996
+      - gfet4t7; dur=1056
       Transfer-Encoding:
       - chunked
       Vary:
@@ -63,14 +63,14 @@ interactions:
       X-XSS-Protection:
       - '0'
       content-length:
-      - '1106'
+      - '1094'
     status:
       code: 200
       message: OK
 - request:
     body: '{"contents": [{"parts": [{"text": "What is the weather in Berlin?"}], "role":
       "user"}, {"parts": [{"functionCall": {"args": {"location": "Berlin"}, "name":
-      "get_weather"}, "thoughtSignature": "CvYBAb4-9vvnHrLDWgkForkASuiZENmtZubXganbnSxPRY-BzjBVAUGnb28JAoxq7O7-7aMM2HrdgO3fvPqAi0NTJLBp-Bv3M3ZN95O8Ijj63zOSFaF_rGlYJvWj5Pwht3Kc75b99ySFMEpXPMim_zx8_gtZkvPlL9RHqPHWkvLu-9kunHc-WUpIEJt9iJ43u3q8y8K1cQB9j-rf8HhjtcbXqgwUrhpk3VE6d9qfb-gJZQemYEmGaXERIzIr4R9XlMSRHVdOCYtYp6b8w-HZjHqNpHLYAM6c-zgkd0wfTkWsdsRzfFJpPqNQnLmIv682XE8FWW7bNETG"}],
+      "get_weather"}, "thoughtSignature": "Cu0BAb4-9vs4yn_0X70fxIjHvJM1Hw3f3WioIw29grr22X04el9m3W9deNPi0Ye-0AYH88oXMFsRK7SkHRyhmp8ut0Am_TEqgBfgj3TyJrZw4j2gWi5esXEZzK3SqwDUP5j5sNZGdpanKK_cs2sZwnSijr9v1kZoTbhERuLcQarq9dLIRQsDKRaBahadzR3usdgv7BBEJI3EYMR62c_y2DydAK6beo34x8ClA-krWF74wkc7XaGG65cUryQCl6gYVhkMK5YQjJZ7rwmUZqjL2Jm7McSB3jR1Yh78YDk8blYnWWQaBViUstaL0tbcvUrx"}],
       "role": "model"}, {"parts": [{"functionResponse": {"name": "get_weather", "response":
       {"result": "The weather in Berlin is sunny."}}}], "role": "user"}], "systemInstruction":
       {"parts": [{"text": "You are a helpful assistant."}], "role": "user"}, "tools":
@@ -87,7 +87,7 @@ interactions:
       Connection:
       - keep-alive
       Content-Length:
-      - '1119'
+      - '1107'
       Content-Type:
       - application/json
       Host:
@@ -107,18 +107,18 @@ interactions:
         97,\n    \"candidatesTokenCount\": 7,\n    \"totalTokenCount\": 104,\n    \"promptTokensDetails\":
         [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 97\n
         \     }\n    ]\n  },\n  \"modelVersion\": \"gemini-2.5-flash\",\n  \"responseId\":
-        \"PyWKaavTNayKvdIPppGYyQk\"\n}\n"
+        \"sjeeafLXHJ-9nsEPieq8IQ\"\n}\n"
     headers:
       Alt-Svc:
       - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Mon, 09 Feb 2026 18:19:43 GMT
+      - Tue, 24 Feb 2026 23:43:47 GMT
       Server:
       - scaffolding on HTTPServer2
       Server-Timing:
-      - gfet4t7; dur=620
+      - gfet4t7; dur=841
       Transfer-Encoding:
       - chunked
       Vary:
@@ -132,7 +132,7 @@ interactions:
       X-XSS-Protection:
       - '0'
       content-length:
-      - '543'
+      - '542'
     status:
       code: 200
       message: OK

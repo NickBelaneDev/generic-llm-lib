@@ -41,17 +41,27 @@ interactions:
     uri: http://192.168.178.97:1234/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-wr0d6598hjenvutymvcsg\",\n  \"object\": \"chat.completion\",\n
-        \ \"created\": 1770661187,\n  \"model\": \"openai/gpt-oss-20b\",\n  \"choices\":
+      string: "{\n  \"id\": \"chatcmpl-gwau8eqmx9tt0iz6dfs3ke\",\n  \"object\": \"chat.completion\",\n
+        \ \"created\": 1771976635,\n  \"model\": \"openai/gpt-oss-20b\",\n  \"choices\":
         [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n
-        \       \"content\": \"\",\n        \"reasoning\": \"Need to call get_weather.\",\n
-        \       \"tool_calls\": [\n          {\n            \"type\": \"function\",\n
-        \           \"id\": \"313056175\",\n            \"function\": {\n              \"name\":
-        \"get_weather\",\n              \"arguments\": \"{\\\"location\\\":\\\"Berlin\\\"}\"\n
-        \           }\n          }\n        ]\n      },\n      \"logprobs\": null,\n
-        \     \"finish_reason\": \"tool_calls\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-        144,\n    \"completion_tokens\": 30,\n    \"total_tokens\": 174\n  },\n  \"stats\":
-        {},\n  \"system_fingerprint\": \"openai/gpt-oss-20b\"\n}"
+        \       \"content\": \"\",\n        \"reasoning\": \"We have a user question:
+        \\\"What is the weather in Berlin?\\\" We are allowed to use the get_weather
+        function. According to the system instructions, we should call the function.
+        The user asks for weather in Berlin.\\n\\nWe need to produce a JSON with \\\"name\\\":\\\"functions.get_weather\\\"
+        and arguments {\\\"location\\\":\\\"Berlin\\\"}.\\n\\nWe need to adhere to
+        the JSON format. Also, we must not add any additional keys or extraneous content.
+        The \\\"commentary\\\" channel is for tool calls, but we must produce a function
+        call.\\n\\nWe should check the conversation: no previous context. We just
+        need to fetch weather for Berlin.\\n\\nSo produce a function call:\\n\\n{\\n
+        \ \\\"name\\\": \\\"functions.get_weather\\\",\\n  \\\"arguments\\\": {\\\"location\\\":\\\"Berlin\\\"}\\n}\\n\\nThat
+        is the function call.\",\n        \"tool_calls\": [\n          {\n            \"type\":
+        \"function\",\n            \"id\": \"323101589\",\n            \"function\":
+        {\n              \"name\": \"get_weather\",\n              \"arguments\":
+        \"{\\\"location\\\":\\\"Berlin\\\"}\"\n            }\n          }\n        ]\n
+        \     },\n      \"logprobs\": null,\n      \"finish_reason\": \"tool_calls\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 144,\n    \"completion_tokens\":
+        183,\n    \"total_tokens\": 327\n  },\n  \"stats\": {},\n  \"system_fingerprint\":
+        \"openai/gpt-oss-20b\"\n}"
     headers:
       Access-Control-Allow-Headers:
       - '*'
@@ -60,13 +70,13 @@ interactions:
       Connection:
       - keep-alive
       Content-Length:
-      - '784'
+      - '1524'
       Content-Type:
       - application/json; charset=utf-8
       Date:
-      - Mon, 09 Feb 2026 18:19:48 GMT
+      - Tue, 24 Feb 2026 23:43:58 GMT
       ETag:
-      - W/"310-2K2rKcNCdGuquspA/IfPfl95Z0M"
+      - W/"5f4-qYUh+5CoSHevf9ZKmEOXT+hEJcs"
       Keep-Alive:
       - timeout=5
       X-Powered-By:
@@ -76,8 +86,17 @@ interactions:
       message: OK
 - request:
     body: '{"messages":[{"role":"system","content":"You are a helpful assistant."},{"role":"user","content":"What
-      is the weather in Berlin?"},{"content":"","refusal":null,"role":"assistant","annotations":null,"audio":null,"function_call":null,"tool_calls":[{"id":"313056175","function":{"arguments":"{\"location\":\"Berlin\"}","name":"get_weather"},"type":"function"}],"reasoning":"Need
-      to call get_weather."},{"role":"tool","tool_call_id":"313056175","name":"get_weather","content":"{\"result\":
+      is the weather in Berlin?"},{"content":"","refusal":null,"role":"assistant","annotations":null,"audio":null,"function_call":null,"tool_calls":[{"id":"323101589","function":{"arguments":"{\"location\":\"Berlin\"}","name":"get_weather"},"type":"function"}],"reasoning":"We
+      have a user question: \"What is the weather in Berlin?\" We are allowed to use
+      the get_weather function. According to the system instructions, we should call
+      the function. The user asks for weather in Berlin.\n\nWe need to produce a JSON
+      with \"name\":\"functions.get_weather\" and arguments {\"location\":\"Berlin\"}.\n\nWe
+      need to adhere to the JSON format. Also, we must not add any additional keys
+      or extraneous content. The \"commentary\" channel is for tool calls, but we
+      must produce a function call.\n\nWe should check the conversation: no previous
+      context. We just need to fetch weather for Berlin.\n\nSo produce a function
+      call:\n\n{\n  \"name\": \"functions.get_weather\",\n  \"arguments\": {\"location\":\"Berlin\"}\n}\n\nThat
+      is the function call."},{"role":"tool","tool_call_id":"323101589","name":"get_weather","content":"{\"result\":
       \"The weather in Berlin is sunny.\"}"}],"model":"openai/gpt-oss-20b","max_tokens":3000,"temperature":1.0,"tools":[{"type":"function","function":{"name":"get_weather","description":"Get
       the weather for a location.","parameters":{"properties":{"location":{"description":"The
       location to get the weather for.","type":"string"}},"required":["location"],"type":"object","additionalProperties":false}}}]}'
@@ -89,7 +108,7 @@ interactions:
       Connection:
       - keep-alive
       Content-Length:
-      - '884'
+      - '1622'
       Content-Type:
       - application/json
       Host:
@@ -118,14 +137,19 @@ interactions:
     uri: http://192.168.178.97:1234/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-5mhuqevgyx59e3lhagjvj8\",\n  \"object\": \"chat.completion\",\n
-        \ \"created\": 1770661188,\n  \"model\": \"openai/gpt-oss-20b\",\n  \"choices\":
+      string: "{\n  \"id\": \"chatcmpl-2kh3jtztpnpdewjd362ew\",\n  \"object\": \"chat.completion\",\n
+        \ \"created\": 1771976639,\n  \"model\": \"openai/gpt-oss-20b\",\n  \"choices\":
         [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n
-        \       \"content\": \"The weather in Berlin is sunny.\",\n        \"reasoning\":
-        \"We just got answer. Provide.\",\n        \"tool_calls\": []\n      },\n
+        \       \"content\": \"It\u2019s sunny in Berlin right now!\",\n        \"reasoning\":
+        \"We have a conversation: user asks \\\"What is the weather in Berlin?\\\"
+        The assistant called function get_weather with location=Berlin, got result
+        \\\"The weather in Berlin is sunny.\\\" So we should respond to user with
+        that. The instruction says: \\\"You are a helpful assistant\\\" and the tool
+        was used to get weather. So we just give the answer: \\\"The weather in Berlin
+        is sunny.\\\" Or more natural.\",\n        \"tool_calls\": []\n      },\n
         \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-        \ \"usage\": {\n    \"prompt_tokens\": 186,\n    \"completion_tokens\": 24,\n
-        \   \"total_tokens\": 210\n  },\n  \"stats\": {},\n  \"system_fingerprint\":
+        \ \"usage\": {\n    \"prompt_tokens\": 186,\n    \"completion_tokens\": 102,\n
+        \   \"total_tokens\": 288\n  },\n  \"stats\": {},\n  \"system_fingerprint\":
         \"openai/gpt-oss-20b\"\n}"
     headers:
       Access-Control-Allow-Headers:
@@ -135,13 +159,13 @@ interactions:
       Connection:
       - keep-alive
       Content-Length:
-      - '585'
+      - '951'
       Content-Type:
       - application/json; charset=utf-8
       Date:
-      - Mon, 09 Feb 2026 18:19:49 GMT
+      - Tue, 24 Feb 2026 23:44:01 GMT
       ETag:
-      - W/"249-Iyxgx5zxyZUedxjLtz7CdoA9CEs"
+      - W/"3b7-/jBO8A8B5sc8GGx9BhJIqENrbdQ"
       Keep-Alive:
       - timeout=5
       X-Powered-By:

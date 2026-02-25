@@ -82,26 +82,6 @@ class GenericGemini(GenericLLM[GenerateContentResponse]):
         self.client: AsyncClient = aclient
         logger.info(f"Initialized GenericGemini with model='{model_name}', temp={temp}, max_tokens={max_tokens}")
 
-    async def _ask_impl(self, prompt: str) -> ChatResult[GenerateContentResponse]:
-        """
-        Generates a text response from the LLM based on a single prompt.
-        This method handles potential function calls internally by initiating a temporary chat session.
-
-        Args:
-            prompt: The user's input prompt.
-
-        Returns:
-            GeminiMessageResponse: The generated text response from the LLM.
-        """
-
-        logger.debug(f"Asking Gemini: {prompt[:50]}...")
-
-        # We use a temporary chat session to handle the tool execution loop (Model -> Tool -> Model)
-        # We start with an empty history.
-        response: ChatResult[GenerateContentResponse] = await self.chat([], prompt)
-
-        return response
-
     async def _chat_impl(
         self, history: List[BaseMessage], user_prompt: str, clean_history: bool = False
     ) -> ChatResult[GenerateContentResponse]:

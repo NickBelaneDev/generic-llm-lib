@@ -1,6 +1,6 @@
 import inspect
 from typing import Any, get_origin, Annotated, get_args
-from pydantic import Field, BaseModel
+from pydantic import Field, BaseModel, ConfigDict
 from pydantic.fields import FieldInfo
 from generic_llm_lib.llm_core.exceptions.exceptions import ToolValidationError
 
@@ -12,11 +12,10 @@ logger = get_logger(__name__)
 class FieldTuple(BaseModel):
     """Ensures, that the dynamic model field definition is correctly typed for Pydantic's create_model."""
 
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     annotation: Any
     field: FieldInfo
-
-    class Config:
-        arbitrary_types_allowed = True
 
 
 class ToolParameterFactory:

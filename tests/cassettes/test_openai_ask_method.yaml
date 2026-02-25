@@ -38,14 +38,20 @@ interactions:
     uri: http://192.168.178.97:1234/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-e2a4ni9ukmpdwyp8psb9xu\",\n  \"object\": \"chat.completion\",\n
-        \ \"created\": 1770661186,\n  \"model\": \"openai/gpt-oss-20b\",\n  \"choices\":
+      string: "{\n  \"id\": \"chatcmpl-boia426s8tqih6uome3um\",\n  \"object\": \"chat.completion\",\n
+        \ \"created\": 1771976630,\n  \"model\": \"openai/gpt-oss-20b\",\n  \"choices\":
         [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n
-        \       \"content\": \"Hello! How can I help you today?\",\n        \"reasoning\":
-        \"Just greet.\",\n        \"tool_calls\": []\n      },\n      \"logprobs\":
-        null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-        80,\n    \"completion_tokens\": 22,\n    \"total_tokens\": 102\n  },\n  \"stats\":
-        {},\n  \"system_fingerprint\": \"openai/gpt-oss-20b\"\n}"
+        \       \"content\": \"Hello! \U0001F44B How can I assist you today?\",\n
+        \       \"reasoning\": \"We have a conversation: user says \\\"Hello\\\".
+        The assistant is told by developer message that they are a helper. So we should
+        respond as helpful, likely greet them back. Possibly ask what help needed.\\n\\nWe
+        need to comply with system instructions: we are ChatGPT, etc. The user says
+        \\\"Hello\\\". So respond politely.\\n\\nWe should keep response short but
+        helpful. Probably greet and ask what can I help with.\",\n        \"tool_calls\":
+        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 80,\n    \"completion_tokens\":
+        105,\n    \"total_tokens\": 185\n  },\n  \"stats\": {},\n  \"system_fingerprint\":
+        \"openai/gpt-oss-20b\"\n}"
     headers:
       Access-Control-Allow-Headers:
       - '*'
@@ -54,13 +60,13 @@ interactions:
       Connection:
       - keep-alive
       Content-Length:
-      - '568'
+      - '968'
       Content-Type:
       - application/json; charset=utf-8
       Date:
-      - Mon, 09 Feb 2026 18:19:47 GMT
+      - Tue, 24 Feb 2026 23:43:53 GMT
       ETag:
-      - W/"238-hADeHXGOhDegkQ7BF0i3NuDyRGw"
+      - W/"3c8-8tuFAY/6Olp4TiRhE0n8OazDR7M"
       Keep-Alive:
       - timeout=5
       X-Powered-By:
