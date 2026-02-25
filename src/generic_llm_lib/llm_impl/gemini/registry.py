@@ -58,6 +58,19 @@ class GeminiToolRegistry(ToolRegistry):
             if tool.parameters:
                 # Gemini does not support 'additionalProperties' in the schema
                 clean_params = self._strip_additional_properties(tool.parameters)
+
+                # Ensure all required parameters are defined in properties to avoid API errors.
+                if "required" in clean_params and "properties" in clean_params:
+                    required_props = [
+                        prop
+                        for prop in clean_params.get("required", [])
+                        if prop in clean_params.get("properties", {})
+                    ]
+                    if required_props:
+                        clean_params["required"] = required_props
+                    else:
+                        clean_params.pop("required", None)
+
                 declarations.append(
                     types.FunctionDeclaration(name=tool.name, description=tool.description, parameters=clean_params)
                 )
@@ -65,6 +78,9 @@ class GeminiToolRegistry(ToolRegistry):
                 declarations.append(types.FunctionDeclaration(name=tool.name, description=tool.description))
 
         return types.Tool(function_declarations=declarations)
+
+    #def _sanitze_params(self):
+
 
     def _strip_additional_properties(self, schema: Any) -> Any:
         """Recursively removes 'additionalProperties' from the schema."""
@@ -82,6 +98,23 @@ class GeminiToolRegistry(ToolRegistry):
                     self._strip_additional_properties(item) if isinstance(item, dict) else item for item in value
                 ]
         return new_schema
+
+    @staticmethod
+    def _ensure_required_params(clean_params: Dict[str, Any]) -> Any:
+        """Ensure all required parameters are defined in properties to avoid API errors."""
+        _clean_params = clean_params.copy()
+        if "required" in _clean_params and "properties" in _clean_params:
+            required_props = [
+                prop
+                for prop in _clean_params.get("required", [])
+                if prop in _clean_params.get("properties", {})
+            ]
+            if required_props:
+                _clean_params["required"] = required_props
+            else:
+                _clean_params.pop("required", None)
+
+        return _clean_params
 
     @property
     def implementations(self) -> Dict[str, Callable]:
