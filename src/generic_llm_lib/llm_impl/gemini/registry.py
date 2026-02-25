@@ -59,9 +59,7 @@ class GeminiToolRegistry(ToolRegistry):
                 sanitized_schema = schema_sanitizer.sanitize(tool.parameters)
                 parameter_schema = types.Schema(**sanitized_schema)
                 declarations.append(
-                    types.FunctionDeclaration(
-                        name=tool.name, description=tool.description, parameters=parameter_schema
-                    )
+                    types.FunctionDeclaration(name=tool.name, description=tool.description, parameters=parameter_schema)
                 )
             else:
                 declarations.append(types.FunctionDeclaration(name=tool.name, description=tool.description))

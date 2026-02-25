@@ -1,4 +1,3 @@
-import pytest
 from generic_llm_lib.llm_impl.gemini import schema_sanitizer
 
 

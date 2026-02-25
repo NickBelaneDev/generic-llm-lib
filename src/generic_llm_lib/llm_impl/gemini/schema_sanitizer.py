@@ -4,7 +4,8 @@ A module for sanitizing tool schemas for the Google Gemini API.
 This module centralizes the logic for cleaning and adapting a generic tool
 schema to meet the specific validation requirements of the Gemini API.
 """
-from typing import Dict, Any, Set
+
+from typing import Dict, Any, Set, cast
 from functools import singledispatch
 
 
@@ -18,7 +19,9 @@ def sanitize(schema: Dict[str, Any]) -> Dict[str, Any]:
     Returns:
         A sanitized schema dictionary ready for the Gemini API.
     """
-    return _recursive_sanitize(schema, set())
+    # We can safely cast the result because we know the top-level input is a dict,
+    # and our dispatch function for dicts returns a dict.
+    return cast(Dict[str, Any], _recursive_sanitize(schema, set()))
 
 
 @singledispatch
@@ -51,7 +54,7 @@ def _(schema: dict, seen: Set[int]) -> dict:
         for key, value in sanitized_at_level.items()
         if key != "additionalProperties"
     }
-    
+
     seen.remove(obj_id)
     return result
 
@@ -61,7 +64,7 @@ def _(schema: list, seen: Set[int]) -> list:
     """Sanitizes a list by recursively sanitizing all of its items."""
     obj_id = id(schema)
     if obj_id in seen:
-        return schema # Circular reference detected
+        return schema  # Circular reference detected
     seen.add(obj_id)
 
     result = [_recursive_sanitize(item, seen) for item in schema]
