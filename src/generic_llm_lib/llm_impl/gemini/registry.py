@@ -1,5 +1,6 @@
 from google.genai import types
 from generic_llm_lib.llm_core import ToolRegistry, ToolDefinition
+from . import schema_sanitizer
 from typing import Callable, Dict, Any, Union, Optional
 
 
@@ -54,67 +55,18 @@ class GeminiToolRegistry(ToolRegistry):
 
         declarations = []
         for tool in self.tools.values():
-
             if tool.parameters:
-                # Gemini does not support 'additionalProperties' in the schema
-                clean_params = self._strip_additional_properties(tool.parameters)
-
-                # Ensure all required parameters are defined in properties to avoid API errors.
-                if "required" in clean_params and "properties" in clean_params:
-                    required_props = [
-                        prop
-                        for prop in clean_params.get("required", [])
-                        if prop in clean_params.get("properties", {})
-                    ]
-                    if required_props:
-                        clean_params["required"] = required_props
-                    else:
-                        clean_params.pop("required", None)
-
+                sanitized_schema = schema_sanitizer.sanitize(tool.parameters)
+                parameter_schema = types.Schema(**sanitized_schema)
                 declarations.append(
-                    types.FunctionDeclaration(name=tool.name, description=tool.description, parameters=clean_params)
+                    types.FunctionDeclaration(
+                        name=tool.name, description=tool.description, parameters=parameter_schema
+                    )
                 )
             else:
                 declarations.append(types.FunctionDeclaration(name=tool.name, description=tool.description))
 
         return types.Tool(function_declarations=declarations)
-
-    #def _sanitze_params(self):
-
-
-    def _strip_additional_properties(self, schema: Any) -> Any:
-        """Recursively removes 'additionalProperties' from the schema."""
-        if not isinstance(schema, dict):
-            return schema
-
-        new_schema = schema.copy()
-        new_schema.pop("additionalProperties", None)
-
-        for key, value in new_schema.items():
-            if isinstance(value, dict):
-                new_schema[key] = self._strip_additional_properties(value)
-            elif isinstance(value, list):
-                new_schema[key] = [
-                    self._strip_additional_properties(item) if isinstance(item, dict) else item for item in value
-                ]
-        return new_schema
-
-    @staticmethod
-    def _ensure_required_params(clean_params: Dict[str, Any]) -> Any:
-        """Ensure all required parameters are defined in properties to avoid API errors."""
-        _clean_params = clean_params.copy()
-        if "required" in _clean_params and "properties" in _clean_params:
-            required_props = [
-                prop
-                for prop in _clean_params.get("required", [])
-                if prop in _clean_params.get("properties", {})
-            ]
-            if required_props:
-                _clean_params["required"] = required_props
-            else:
-                _clean_params.pop("required", None)
-
-        return _clean_params
 
     @property
     def implementations(self) -> Dict[str, Callable]:
