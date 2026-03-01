@@ -25,7 +25,13 @@ dependencies = [
 [project.urls]
 "Homepage" = "https://github.com/NickBelaneDev/generic-llm-lib"
 
-[dependency-groups]
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools]
+py-modules = []
+
+[project.optional-dependencies]
 dev = [
     "black>=24.0",
     "mypy>=1.0",
@@ -65,3 +71,6 @@ mypy_path = "src"
 explicit_package_bases = false
 namespace_packages = false
 exclude = ["^tests/"]
+
+[tool.bandit]
+skips = []

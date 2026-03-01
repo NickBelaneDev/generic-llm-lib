@@ -2,94 +2,28 @@ name: CI
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: [ main ]
   pull_request:
-    branches: [ "main", "master" ]
+    branches: [ main ]
 
 jobs:
-  quality-and-security:
-    name: Quality & Security
+  build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version-file: "pyproject.toml"
-
-      - name: Install dependencies
-        run: uv sync --all-extras --dev
-
-      - name: Run Ruff (Linting)
-        run: uv run ruff check .
-
-      - name: Run Black (Formatting)
-        run: uv run black --check .
-
-      - name: Run Bandit (Security)
-        run: uv run bandit -r src/
-
-      - name: Run Pip-audit (Vulnerabilities)
-        run: uv run pip-audit
-
-      - name: Run Interrogate (Docstrings)
-        run: uv run interrogate -vv --fail-under 90 src/
-
-  types-and-complexity:
-    name: Types & Complexity
-    runs-on: ubuntu-latest
-    needs: quality-and-security
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version-file: "pyproject.toml"
-      - name: Install dependencies
-        run: uv sync --all-extras --dev
-
-      - name: Run Mypy (Static Types)
-        run: uv run mypy src
-
-    #  - name: Run Xenon (Complexity)
-    #    run: uv run xenon --max-absolute B --max-modules B --max-average B src/
-
-  tests:
-    name: Tests & Coverage
-    runs-on: ubuntu-latest
-    needs: types-and-complexity
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version-file: "pyproject.toml"
-      - name: Install dependencies
-        run: uv sync --all-extras --dev
-
-      - name: Run Tests with Coverage
-        run: uv run pytest --cov=src --cov-report=term-missing --cov-fail-under=90
-
-  backup:
-    name: Backup
-    runs-on: ubuntu-latest
-    needs: tests
-    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && github.event_name == 'push'
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Push to backup branch
-        run: git push origin HEAD:backup/main --force
+    - uses: actions/checkout@v3
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    - name: Install dependencies
+      run: pip install uv && uv sync --all-extras --dev
+    - name: Run quality checks
+      run: make quality
+    - name: Run security checks
+      run: make security
+    - name: Run docstring checks
+      run: make doc
+    - name: Run complexity checks
+      run: make complexity
+    - name: Run tests
+      run: make test

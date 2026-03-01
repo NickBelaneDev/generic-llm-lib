@@ -504,7 +504,7 @@ dependencies = [
     { name = "pydantic" },
 ]
 
-[package.dev-dependencies]
+[package.optional-dependencies]
 dev = [
     { name = "bandit" },
     { name = "black" },
@@ -522,29 +522,26 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "bandit", marker = "extra == 'dev'", specifier = ">=1.9.3" },
+    { name = "black", marker = "extra == 'dev'", specifier = ">=24.0" },
     { name = "cryptography", specifier = ">=46.0.5" },
     { name = "google-genai" },
+    { name = "interrogate", marker = "extra == 'dev'", specifier = ">=1.7.0" },
     { name = "jsonref", specifier = ">=1.1.0" },
     { name = "mcp", specifier = ">=1.26.0" },
+    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.0" },
     { name = "openai" },
+    { name = "pip-audit", marker = "extra == 'dev'", specifier = ">=2.10.0" },
     { name = "pydantic", specifier = ">=2.0" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
+    { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.24.0" },
+    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=7.0.0" },
+    { name = "pytest-recording", marker = "extra == 'dev'", specifier = ">=0.13.0" },
+    { name = "python-dotenv", marker = "extra == 'dev'", specifier = ">=1.0.0" },
+    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.1.0" },
+    { name = "xenon", marker = "extra == 'dev'", specifier = ">=0.9.3" },
 ]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "bandit", specifier = ">=1.9.3" },
-    { name = "black", specifier = ">=24.0" },
-    { name = "interrogate", specifier = ">=1.7.0" },
-    { name = "mypy", specifier = ">=1.0" },
-    { name = "pip-audit", specifier = ">=2.10.0" },
-    { name = "pytest", specifier = ">=8.0" },
-    { name = "pytest-asyncio", specifier = ">=0.24.0" },
-    { name = "pytest-cov", specifier = ">=7.0.0" },
-    { name = "pytest-recording", specifier = ">=0.13.0" },
-    { name = "python-dotenv", specifier = ">=1.0.0" },
-    { name = "ruff", specifier = ">=0.1.0" },
-    { name = "xenon", specifier = ">=0.9.3" },
-]
+provides-extras = ["dev"]
 
 [[package]]
 name = "google-auth"
