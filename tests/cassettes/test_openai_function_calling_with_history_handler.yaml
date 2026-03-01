@@ -1,0 +1,159 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"system","content":"You are a helpful assistant that
+      can call tools."},{"role":"user","content":"What is the weather in Berlin?"}],"model":"openai/gpt-oss-20b","max_tokens":3000,"temperature":1.0,"tools":[{"type":"function","function":{"name":"get_weather","description":"Get
+      the weather for a location.","parameters":{"properties":{"location":{"description":"The
+      location to get the weather for.","type":"string"}},"required":["location"],"type":"object","additionalProperties":false}}}]}'
+    headers:
+      Accept:
+      - application/json
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '510'
+      Content-Type:
+      - application/json
+      Host:
+      - 192.168.178.79:1234
+      User-Agent:
+      - AsyncOpenAI/Python 2.16.0
+      X-Stainless-Arch:
+      - other:amd64
+      X-Stainless-Async:
+      - async:asyncio
+      X-Stainless-Lang:
+      - python
+      X-Stainless-OS:
+      - Windows
+      X-Stainless-Package-Version:
+      - 2.16.0
+      X-Stainless-Runtime:
+      - CPython
+      X-Stainless-Runtime-Version:
+      - 3.13.5
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+    method: POST
+    uri: http://192.168.178.79:1234/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-v2p54kthba7zsa2m1idzwp\",\n  \"object\": \"chat.completion\",\n
+        \ \"created\": 1772394253,\n  \"model\": \"openai/gpt-oss-20b\",\n  \"choices\":
+        [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n
+        \       \"content\": \"\",\n        \"reasoning\": \"We need to use the tool
+        get_weather with location \\\"Berlin\\\". The assistant should call that function.
+        We'll do a single function call.\",\n        \"tool_calls\": [\n          {\n
+        \           \"type\": \"function\",\n            \"id\": \"288052795\",\n
+        \           \"function\": {\n              \"name\": \"get_weather\",\n              \"arguments\":
+        \"{\\\"location\\\":\\\"Berlin\\\"}\"\n            }\n          }\n        ]\n
+        \     },\n      \"logprobs\": null,\n      \"finish_reason\": \"tool_calls\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 148,\n    \"completion_tokens\":
+        51,\n    \"total_tokens\": 199\n  },\n  \"stats\": {},\n  \"system_fingerprint\":
+        \"openai/gpt-oss-20b\"\n}"
+    headers:
+      Access-Control-Allow-Headers:
+      - '*'
+      Access-Control-Allow-Origin:
+      - '*'
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '895'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Sun, 01 Mar 2026 19:44:14 GMT
+      ETag:
+      - W/"37f-3UwshHbcFLA1gNWBRta4UUgTDjE"
+      Keep-Alive:
+      - timeout=5
+      X-Powered-By:
+      - Express
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are a helpful assistant that
+      can call tools."},{"role":"user","content":"What is the weather in Berlin?"},{"content":"","refusal":null,"role":"assistant","annotations":null,"audio":null,"function_call":null,"tool_calls":[{"id":"288052795","function":{"arguments":"{\"location\":\"Berlin\"}","name":"get_weather"},"type":"function"}],"reasoning":"We
+      need to use the tool get_weather with location \"Berlin\". The assistant should
+      call that function. We''ll do a single function call."},{"role":"tool","tool_call_id":"288052795","name":"get_weather","content":"{\"result\":
+      \"The weather in Berlin is sunny.\"}"}],"model":"openai/gpt-oss-20b","max_tokens":3000,"temperature":1.0,"tools":[{"type":"function","function":{"name":"get_weather","description":"Get
+      the weather for a location.","parameters":{"properties":{"location":{"description":"The
+      location to get the weather for.","type":"string"}},"required":["location"],"type":"object","additionalProperties":false}}}]}'
+    headers:
+      Accept:
+      - application/json
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1014'
+      Content-Type:
+      - application/json
+      Host:
+      - 192.168.178.79:1234
+      User-Agent:
+      - AsyncOpenAI/Python 2.16.0
+      X-Stainless-Arch:
+      - other:amd64
+      X-Stainless-Async:
+      - async:asyncio
+      X-Stainless-Lang:
+      - python
+      X-Stainless-OS:
+      - Windows
+      X-Stainless-Package-Version:
+      - 2.16.0
+      X-Stainless-Runtime:
+      - CPython
+      X-Stainless-Runtime-Version:
+      - 3.13.5
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+    method: POST
+    uri: http://192.168.178.79:1234/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-dl3hnsmhinjsrw1wc07pc\",\n  \"object\": \"chat.completion\",\n
+        \ \"created\": 1772394254,\n  \"model\": \"openai/gpt-oss-20b\",\n  \"choices\":
+        [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n
+        \       \"content\": \"The latest weather report says Berlin is sunny today!\",\n
+        \       \"reasoning\": \"We need to produce a response: The user asked \\\"What
+        is the weather in Berlin?\\\" We have used get_weather function, got result:
+        \\\"The weather in Berlin is sunny.\\\" We should reply to the user. Possibly
+        include the information from function call.\\n\\nThus respond: \\\"According
+        to the weather data, Berlin is sunny today.\\\" Or something like that.\",\n
+        \       \"tool_calls\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+        \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 190,\n    \"completion_tokens\":
+        91,\n    \"total_tokens\": 281\n  },\n  \"stats\": {},\n  \"system_fingerprint\":
+        \"openai/gpt-oss-20b\"\n}"
+    headers:
+      Access-Control-Allow-Headers:
+      - '*'
+      Access-Control-Allow-Origin:
+      - '*'
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '922'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Sun, 01 Mar 2026 19:44:16 GMT
+      ETag:
+      - W/"39a-M93zgOclsHaF7wvVdHWBt8mvXJg"
+      Keep-Alive:
+      - timeout=5
+      X-Powered-By:
+      - Express
+    status:
+      code: 200
+      message: OK
+version: 1

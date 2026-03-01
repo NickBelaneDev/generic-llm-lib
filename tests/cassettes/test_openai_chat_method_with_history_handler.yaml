@@ -1,0 +1,175 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"system","content":"You are a test helper."},{"role":"user","content":"Hi"}],"model":"openai/gpt-oss-20b","max_tokens":3000,"temperature":1.0,"tools":null}'
+    headers:
+      Accept:
+      - application/json
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '176'
+      Content-Type:
+      - application/json
+      Host:
+      - 192.168.178.79:1234
+      User-Agent:
+      - AsyncOpenAI/Python 2.16.0
+      X-Stainless-Arch:
+      - other:amd64
+      X-Stainless-Async:
+      - async:asyncio
+      X-Stainless-Lang:
+      - python
+      X-Stainless-OS:
+      - Windows
+      X-Stainless-Package-Version:
+      - 2.16.0
+      X-Stainless-Runtime:
+      - CPython
+      X-Stainless-Runtime-Version:
+      - 3.13.5
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+    method: POST
+    uri: http://192.168.178.79:1234/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-0fokqntwatcezq85i9a5j1\",\n  \"object\": \"chat.completion\",\n
+        \ \"created\": 1772394244,\n  \"model\": \"openai/gpt-oss-20b\",\n  \"choices\":
+        [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n
+        \       \"content\": \"Hi! \U0001F44B I'm here to help with any questions
+        or tasks you have. What can I assist you with today?\",\n        \"reasoning\":
+        \"We have an instruction from the developer: \\\"You are a test helper.\\\"
+        And user says \\\"Hi\\\". So we need to respond. The context: The conversation
+        is minimal. The user just says \\\"Hi\\\". As a test helper, likely we should
+        respond politely and possibly ask how we can help. The developer instruction:
+        \\\"You are a test helper.\\\" This could mean the assistant should act as
+        a test helper. That might be part of some internal system, but we need to
+        produce a helpful answer.\\n\\nWe need to respond appropriately: greet the
+        user and ask how we can help. Probably \\\"Hi! How can I assist you today?\\\"
+        Or \\\"Hello! I'm here to help with your test. What do you need assistance
+        with?\\\"\\n\\nGiven the minimal context, we should keep it short and friendly.
+        The conversation may be part of a test scenario for a chat system.\\n\\nWe
+        need to consider: There might be restrictions. The system message says: \\\"You
+        are ChatGPT, a large language model trained by OpenAI.\\\" The developer instruction
+        says \\\"You are a test helper.\\\" The user says \\\"Hi\\\". There's no direct
+        question. We need to respond as a test helper: ask for clarification or see
+        what they want help with.\\n\\nThus I think the best response is: \\\"Hi!
+        I'm here to assist you. What can I help with today?\\\" Or something like
+        that.\\n\\nWe should adhere to the content policy: no disallowed content.
+        This is fine.\\n\\nOk, let's answer accordingly.\",\n        \"tool_calls\":
+        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 81,\n    \"completion_tokens\":
+        332,\n    \"total_tokens\": 413\n  },\n  \"stats\": {},\n  \"system_fingerprint\":
+        \"openai/gpt-oss-20b\"\n}"
+    headers:
+      Access-Control-Allow-Headers:
+      - '*'
+      Access-Control-Allow-Origin:
+      - '*'
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '2004'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Sun, 01 Mar 2026 19:44:09 GMT
+      ETag:
+      - W/"7d4-cjMjJeTruUgddaizRIIp3fd+z4k"
+      Keep-Alive:
+      - timeout=5
+      X-Powered-By:
+      - Express
+    status:
+      code: 200
+      message: OK
+- request:
+    body: "{\"messages\":[{\"role\":\"system\",\"content\":\"You are a test helper.\"},{\"role\":\"user\",\"content\":\"Hi\"},{\"role\":\"assistant\",\"content\":\"Hi!
+      \U0001F44B I'm here to help with any questions or tasks you have. What can I
+      assist you with today?\"},{\"role\":\"user\",\"content\":\"Thanks!\"}],\"model\":\"openai/gpt-oss-20b\",\"max_tokens\":3000,\"temperature\":1.0,\"tools\":null}"
+    headers:
+      Accept:
+      - application/json
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '343'
+      Content-Type:
+      - application/json
+      Host:
+      - 192.168.178.79:1234
+      User-Agent:
+      - AsyncOpenAI/Python 2.16.0
+      X-Stainless-Arch:
+      - other:amd64
+      X-Stainless-Async:
+      - async:asyncio
+      X-Stainless-Lang:
+      - python
+      X-Stainless-OS:
+      - Windows
+      X-Stainless-Package-Version:
+      - 2.16.0
+      X-Stainless-Runtime:
+      - CPython
+      X-Stainless-Runtime-Version:
+      - 3.13.5
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+    method: POST
+    uri: http://192.168.178.79:1234/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-z7qbhfn25ndc1rde0u9m\",\n  \"object\": \"chat.completion\",\n
+        \ \"created\": 1772394249,\n  \"model\": \"openai/gpt-oss-20b\",\n  \"choices\":
+        [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n
+        \       \"content\": \"You\u2019re welcome! Let me know what you\u2019d like
+        help with next.\",\n        \"reasoning\": \"The user says \\\"Thanks!\\\"
+        in response to the previous greeting. They might just be acknowledging, no
+        further request. The conversation is short; maybe they want to proceed with
+        a test or question? They say \\\"Thanks!\\\" as a friendly acknowledgement.
+        The instruction from developer: \\\"You are a test helper.\\\" That is presumably
+        for me to act as a test helper. The user hasn't asked anything further.\\n\\nThus
+        I can respond with something like: \\\"You're welcome! Let me know if there's
+        anything else you'd like help with.\\\" Possibly ask them what they'd like
+        to test. Or ask for a question or topic.\\n\\nWe should follow the instructions:
+        \\\"You are a test helper.\\\" So I can ask them what they need help with.\\n\\nThus
+        respond politely: \\\"You're welcome! How can I assist you further?\\\".\\n\\nWe
+        should keep it short and friendly.\\n\\nThus the answer: \\\"You're welcome!
+        Let me know if you need anything else.\\\"\",\n        \"tool_calls\": []\n
+        \     },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n
+        \ ],\n  \"usage\": {\n    \"prompt_tokens\": 117,\n    \"completion_tokens\":
+        211,\n    \"total_tokens\": 328\n  },\n  \"stats\": {},\n  \"system_fingerprint\":
+        \"openai/gpt-oss-20b\"\n}"
+    headers:
+      Access-Control-Allow-Headers:
+      - '*'
+      Access-Control-Allow-Origin:
+      - '*'
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1490'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Sun, 01 Mar 2026 19:44:13 GMT
+      ETag:
+      - W/"5d2-YuMtEPqkJrU4uLPCsMhHtNMKJXU"
+      Keep-Alive:
+      - timeout=5
+      X-Powered-By:
+      - Express
+    status:
+      code: 200
+      message: OK
+version: 1
