@@ -1,87 +1,131 @@
-# Generic LLM Library
+<div align="center">
 
-A flexible, async-first library designed for building scalable agents and chatbots. It provides a unified interface for interacting with Large Language Models (LLMs) like OpenAI, automating complex tasks like function calling loops while remaining lightweight enough for quick server-side deployments.
+# 🤖 Generic LLM Library
 
-## Features
+**A modern, async-first Python framework for building scalable AI agents and chatbots.**
 
-- **Async-First Architecture**: Built from the ground up for high-performance, non-blocking operations, making it ideal for server environments.
-- **Flexible Agent System**: Create adaptable agents capable of handling complex interactions and tool usage.
-- **Unified Interface**: Abstract away provider differences behind a consistent API.
-- **Automated Function Calling**: Seamlessly handles the "Model -> Tool -> Model" execution loop.
-- **Tool Registry**: Simple decorator-based registration to turn Python functions into LLM-accessible tools.
-- **Chatbot Ready**: Designed to be quickly integrated into web backends for powering chatbots.
+[![Python Version](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Checked with mypy](https://img.shields.io/badge/mypy-checked-blue)](http://mypy-lang.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## Installation
+---
 
-Install the package via pip:
+[Features](#-features) • [Installation](#-installation) • [Quick Start](#-quick-start) • [Core Concepts](#-core-concepts) • [CI/CD & Quality](#-cicd--quality)
+
+</div>
+
+## ✨ Features
+
+- 🚀 **Async-First Architecture**: Built for high-performance, non-blocking operations.
+- 🤖 **Unified Provider API**: Switch between **OpenAI** and **Google Gemini** with zero logic changes.
+- 🛠️ **Automated Tool Loops**: Handles the complex "Model -> Tool -> Model" execution cycle out-of-the-box.
+- 📝 **Smart History Management**: Centralized `HistoryHandler` for effortless conversation state tracking.
+- 📦 **Type-Safe Tooling**: Define tools using standard Python type hints and Pydantic models.
+- 🛡️ **Production Ready**: Built-in exponential backoff, retry logic, and comprehensive error handling.
+
+## 📦 Installation
+
+Since this library is currently in development, you can install it directly from the source.
+
+### Using [uv](https://github.com/astral-sh/uv) (Recommended)
 
 ```bash
-pip install generic-llm-lib
+# Clone the repository
+git clone https://github.com/NickBelaneDev/generic-llm-lib.git
+cd generic-llm-lib
+
+# Install dependencies and create a virtual environment
+uv sync
 ```
 
-Or using [uv](https://github.com/astral-sh/uv):
+### Using pip
 
 ```bash
-uv add generic-llm-lib
+git clone https://github.com/NickBelaneDev/generic-llm-lib.git
+cd generic-llm-lib
+pip install -e .
 ```
 
-## Usage
+## 🚀 Quick Start
 
-### Generic Agent
+Build a tool-capable chatbot in minutes.
 
 ```python
-from generic_llm_lib.llm_impl import OpenAIToolRegistry, GenericOpenAI
-from openai import AsyncOpenAI
-from pydantic import Field
-from typing import Annotated
 import asyncio
 import os
+from typing import Annotated
+from pydantic import Field
+from openai import AsyncOpenAI
+from generic_llm_lib.llm_impl import GenericOpenAI, OpenAIToolRegistry
+from generic_llm_lib.llm_core.messages import HistoryHandler
 
-# 1. Create a registry
+# 1. Define your tools
 registry = OpenAIToolRegistry()
 
+@registry.register
+async def get_weather(
+    location: Annotated[str, Field(description="The city and state, e.g. Berlin, DE")]
+) -> str:
+    """Get the current weather in a given location."""
+    return f"The weather in {location} is sunny and 22°C."
 
-# 2. Register tools
-@registry.tool  # makes the function a tool
-def get_weather(location: Annotated[str, Field(description="The city and state, e.g. San Francisco, CA")]):
-    """Get the current weather in a given location"""
-    return f"Sunny in {location}"
-
-
-# 3. Initialize
-client = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
-llm = GenericOpenAI(client, "gpt-4o", "You are helpful.", registry)
-
-
-# 4. Chat
 async def main():
-    openai_chat = await llm.chat([], "Weather in Berlin?")
-    print(openai_chat.last_response.text)
-    print(openai_chat.last_response.tokens.total_tokens)
-    print(openai_chat.history)
+    # 2. Initialize the LLM
+    client = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+    llm = GenericOpenAI(
+        client=client,
+        model_name="gpt-4o",
+        sys_instruction="You are a helpful assistant.",
+        registry=registry
+    )
 
+    # 3. Start a conversation with the HistoryHandler
+    history = HistoryHandler(system_instruction="You are a helpful assistant.")
+
+    # 4. Run the chat
+    result = await llm.chat(history, "What's the weather like in Berlin?")
+    
+    print(f"Assistant: {result.content}")
+    
+    # The history is automatically updated and can be used for the next turn
+    # result.history contains the full conversation including tool calls
 
 if __name__ == "__main__":
     asyncio.run(main())
 ```
 
-## Architecture & Tool Execution Logic
+## 🧠 Core Concepts
 
-The library uses a centralized `ToolExecutionLoop` to handle the interaction between the LLM and the registered tools. This ensures consistent behavior and simplifies the implementation.
+### 📝 HistoryHandler
+The `HistoryHandler` is your central state manager. It abstracts away the complexity of managing message lists, ensuring that system prompts, user inputs, and tool interactions are correctly ordered and formatted.
 
-### How it works
+- **`add_user_message(content)`**: Manually add user input.
+- **`clean_tool_calls()`**: Strip intermediate tool outputs to save tokens.
+- **`copy()`**: Create a deep copy of the current conversation state.
 
-1.  **Initial Request**: The user sends a message to the LLM via the `chat` method.
-2.  **Model Response**: The LLM processes the message and may decide to call one or more tools. It returns a response containing "tool calls".
-3.  **Tool Execution Loop**:
-    *   The `ToolExecutionLoop` inspects the response.
-    *   If tool calls are present, it iterates through them.
-    *   **Validation**: It validates the tool name against the registry and parses/validates the arguments using the tool's Pydantic model (if available).
-    *   **Execution**: It executes the corresponding Python function.
-        *   **Async Support**: Async functions are awaited directly.
-        *   **Sync Support**: Synchronous functions are run in a separate thread (`asyncio.to_thread`) to prevent blocking the event loop.
-    *   **Error Handling**: Errors during validation or execution are caught and formatted as error messages to be sent back to the LLM, allowing the model to self-correct.
-4.  **Feedback Loop**: The results (or errors) of the tool executions are sent back to the LLM.
-5.  **Final Response**: The LLM processes the tool results and generates a final natural language response, which is returned to the user.
+### 🛠️ Tool Registry
+Turn any Python function into an LLM tool. The library automatically generates the required JSON schema from your function's docstring and type hints.
 
-This loop continues until the model stops requesting tool calls or the `max_function_loops` limit is reached.
+```python
+@registry.register
+def calculate(a: int, b: int, op: str = "+") -> int:
+    """Perform basic arithmetic operations."""
+    return a + b if op == "+" else a - b
+```
+
+## 🛠 CI/CD & Quality
+
+We maintain high code quality standards through a rigorous CI/CD pipeline:
+
+- **Linting & Formatting**: [Ruff](https://github.com/astral-sh/ruff) and [Black](https://github.com/psf/black) for consistent style.
+- **Static Analysis**: [MyPy](http://mypy-lang.org/) for strict type checking.
+- **Security**: [Bandit](https://github.com/PyCQA/bandit) for vulnerability scanning and [pip-audit](https://github.com/pypa/pip-audit) for dependency checks.
+- **Complexity & Docs**: [Xenon](https://github.com/rubik/xenon) for code complexity and [Interrogate](https://github.com/econchick/interrogate) for docstring coverage.
+- **Testing**: [Pytest](https://docs.pytest.org/) with `pytest-asyncio` and `pytest-recording` (VCR) for deterministic integration tests.
+
+---
+<div align="center">
+Made with ❤️ for the AI Community
+</div>

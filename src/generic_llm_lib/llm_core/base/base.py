@@ -1,10 +1,10 @@
 """Core abstractions for LLM provider implementations."""
 
 import asyncio
-from typing import List, TypeVar, Generic, Callable, Coroutine, Any
+from typing import List, TypeVar, Generic, Callable, Coroutine, Any, Union
 from abc import ABC, abstractmethod
 from pydantic import BaseModel
-from ..messages import BaseMessage
+from ..messages import BaseMessage, HistoryHandler
 from ..logger import get_logger
 
 logger = get_logger(__name__)
@@ -75,7 +75,9 @@ class GenericLLM(ABC, Generic[ProviderResT]):
         logger.error(msg)
         raise TimeoutError(msg)
 
-    async def chat(self, history: List[BaseMessage], user_prompt: str) -> ChatResult[ProviderResT]:
+    async def chat(
+        self, history: Union[List[BaseMessage], HistoryHandler], user_prompt: str
+    ) -> ChatResult[ProviderResT]:
         """
         Conducts a chat turn with the LLM.
 
@@ -87,7 +89,13 @@ class GenericLLM(ABC, Generic[ProviderResT]):
             A provider-specific response object containing the LLM's response
             and updated conversation history.
         """
-        return await self._execute_with_retry(self._chat_impl, history, user_prompt)
+        # Normalize history to List[BaseMessage]
+        if isinstance(history, HistoryHandler):
+            history_list = history.messages
+        else:
+            history_list = history
+
+        return await self._execute_with_retry(self._chat_impl, history_list, user_prompt)
 
     async def ask(self, prompt: str) -> ChatResult[ProviderResT]:
         """

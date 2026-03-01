@@ -77,7 +77,7 @@ class GenericOpenAI(GenericLLM[ChatCompletion]):
         )
 
     async def _chat_impl(
-        self, history: List[BaseMessage], user_prompt: str, clean_history: bool = False
+        self, history: List[BaseMessage], user_prompt: str
     ) -> ChatResult[ChatCompletion]:
         """
         Processes a single turn of a chat conversation, including handling user input,
@@ -89,7 +89,6 @@ class GenericOpenAI(GenericLLM[ChatCompletion]):
         Args:
             history: A list of `BaseMessage` objects representing the conversation history.
             user_prompt: The current message from the user.
-            clean_history: Removes function calls from the chat history.
 
         Returns:
             ChatResult[ChatCompletion]: An object containing:
@@ -146,11 +145,6 @@ class GenericOpenAI(GenericLLM[ChatCompletion]):
             if not messages or messages[-1] != last_msg:
                 messages.append(last_msg)
 
-        # Clean history to remove intermediate tool calls and outputs to save tokens
-        if clean_history:
-            logger.debug("Cleaning chat history (removing intermediate tool calls).")
-            messages = self._clean_history(messages)
-
         return self._build_response(final_response, messages)
 
     @staticmethod
@@ -166,19 +160,20 @@ class GenericOpenAI(GenericLLM[ChatCompletion]):
         """
         openai_history = []
         for msg in history:
-            if isinstance(msg, UserMessage):
+            if msg.role == "user":
                 openai_history.append({"role": "user", "content": msg.content})
-            elif isinstance(msg, AssistantMessage):
+            elif msg.role == "assistant":
                 openai_msg = {"role": "assistant", "content": msg.content}
-                if msg.tool_calls:
+                if isinstance(msg, AssistantMessage) and msg.tool_calls:
                     openai_msg["tool_calls"] = msg.tool_calls  # type: ignore
                 openai_history.append(openai_msg)
-            elif isinstance(msg, SystemMessage):
+            elif msg.role == "system":
                 openai_history.append({"role": "system", "content": msg.content})
-            elif isinstance(msg, ToolMessage):
-                openai_history.append(
-                    {"role": "tool", "content": msg.content, "tool_call_id": msg.tool_call_id, "name": msg.name}
-                )
+            elif msg.role == "tool":
+                if isinstance(msg, ToolMessage):
+                    openai_history.append(
+                        {"role": "tool", "content": msg.content, "tool_call_id": msg.tool_call_id, "name": msg.name}
+                    )
         return openai_history
 
     async def _handle_function_calls(
@@ -214,44 +209,6 @@ class GenericOpenAI(GenericLLM[ChatCompletion]):
         final_response: ChatCompletion = await self._tool_loop.run(initial_response=initial_response, adapter=adapter)
 
         return messages, final_response
-
-    @staticmethod
-    def _clean_history(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Removes intermediate tool calls and outputs from the history to save tokens.
-
-        Keeps user messages, system instructions, and assistant messages that have content.
-
-        Args:
-            messages: The list of messages to clean.
-
-        Returns:
-            A list of cleaned messages.
-        """
-        # logger.debug(f"Cleaning history. Original size: {len(messages)}")
-        cleaned_messages = []
-        for msg in messages:
-            role = msg.get("role")
-            if role == "tool":
-                continue
-
-            if role == "assistant":
-                # If the message has tool_calls, we only keep it if it has content.
-                # We strip the tool_calls field to avoid sending it back to the model in future turns.
-                if msg.get("tool_calls"):
-                    if msg.get("content"):
-                        # Create a clean copy without tool_calls
-                        clean_msg = {k: v for k, v in msg.items() if k != "tool_calls"}
-                        cleaned_messages.append(clean_msg)
-                    # If no content, we skip this message entirely
-                else:
-                    # No tool calls, keep the message
-                    cleaned_messages.append(msg)
-            else:
-                # Keep system and user messages
-                cleaned_messages.append(msg)
-
-        # logger.debug(f"History cleaned. New size: {len(cleaned_messages)}")
-        return cleaned_messages
 
     @staticmethod
     def _build_response(response: ChatCompletion, history: List[Dict[str, Any]]) -> ChatResult[ChatCompletion]:

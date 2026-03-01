@@ -51,7 +51,12 @@ def openai_client() -> AsyncOpenAI:
     api_key = os.getenv("LOCAL_PENAI_API_KEY")
     if not api_key:
         api_key = "dummy_key"
-    return AsyncOpenAI(api_key=api_key, base_url=os.getenv("LOCAL_OPENAI_BASE_URL"))
+
+    # Default to a known working mock URL if the environment variable is not set.
+    # This ensures that tests can run from cassettes without a local mock server.
+    base_url = os.getenv("LOCAL_OPENAI_BASE_URL", "http://localhost:8080/v1")
+
+    return AsyncOpenAI(api_key=api_key, base_url=base_url)
 
 
 @pytest.fixture

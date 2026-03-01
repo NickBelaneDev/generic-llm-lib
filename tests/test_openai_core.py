@@ -1,6 +1,6 @@
 import pytest
 from openai import AsyncOpenAI
-from generic_llm_lib.llm_core.messages import UserMessage, AssistantMessage, SystemMessage
+from generic_llm_lib.llm_core.messages import UserMessage, AssistantMessage, SystemMessage, HistoryHandler
 from generic_llm_lib.llm_core.base import ChatResult
 from generic_llm_lib.llm_impl import GenericOpenAI, OpenAIToolRegistry
 from typing import Annotated
@@ -49,13 +49,14 @@ async def test_openai_ask_method(openai_client: AsyncOpenAI) -> None:
 
 @pytest.mark.vcr
 @pytest.mark.asyncio
-async def test_openai_chat_method(openai_client: AsyncOpenAI) -> None:
+async def test_openai_chat_method_with_history_handler(openai_client: AsyncOpenAI) -> None:
     openai_llm = GenericOpenAI(
         client=openai_client, model_name=_get_openai_model(), sys_instruction="You are a helper."
     )
+    history = HistoryHandler(system_instruction="You are a test helper.")
 
     # Execute
-    response = await openai_llm.chat([], "Hi")
+    response = await openai_llm.chat(history, "Hi")
 
     # Verify
     assert isinstance(response, ChatResult)
@@ -65,10 +66,15 @@ async def test_openai_chat_method(openai_client: AsyncOpenAI) -> None:
     assert isinstance(response.history[1], UserMessage)
     assert isinstance(response.history[2], AssistantMessage)
 
+    # Continue conversation
+    history = HistoryHandler(messages=response.history)
+    response_2 = await openai_llm.chat(history, "Thanks!")
+    assert len(response_2.history) == 5
+
 
 @pytest.mark.vcr
 @pytest.mark.asyncio
-async def test_openai_function_calling(openai_client: AsyncOpenAI) -> None:
+async def test_openai_function_calling_with_history_handler(openai_client: AsyncOpenAI) -> None:
     # Setup registry with a mock tool
     registry = OpenAIToolRegistry()
 
@@ -84,11 +90,18 @@ async def test_openai_function_calling(openai_client: AsyncOpenAI) -> None:
         sys_instruction="You are a helpful assistant.",
         registry=registry,
     )
+    history = HistoryHandler(system_instruction="You are a helpful assistant that can call tools.")
 
     # Execute
-    response = await openai_llm.chat([], "What is the weather in Berlin?")
+    response = await openai_llm.chat(history, "What is the weather in Berlin?")
 
     # Verify content
     assert "sunny" in response.content.lower()
     assert len(response.history) > 2
     assert response.history[-1].content == response.content
+
+    # Test cleaning
+    history = HistoryHandler(messages=response.history)
+    history.clean_tool_calls()
+    assert len(history.messages) == 3  # System, User, Assistant (content only)
+    assert not history.messages[2].tool_calls
