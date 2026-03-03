@@ -9,6 +9,8 @@ from .messages.models import (
     ToolMessage,
 )
 
+from .messages.history_handler import HistoryHandler
+
 from .tools import ToolRegistry, ToolDefinition
 
 from .exceptions import (
@@ -26,6 +28,7 @@ __all__ = [
     "AssistantMessage",
     "SystemMessage",
     "ToolMessage",
+    "HistoryHandler",
     "ToolRegistry",
     "ToolDefinition",
     "LLMToolError",

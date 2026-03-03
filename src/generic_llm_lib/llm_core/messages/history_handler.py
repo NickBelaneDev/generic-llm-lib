@@ -56,6 +56,17 @@ class HistoryHandler:
         """Clear the history."""
         self._messages.clear()
 
+    def update(self, messages: List[BaseMessage]) -> None:
+        """
+        Update the history with a new list of messages.
+        
+        This replaces the current history with the provided list.
+        
+        Args:
+            messages: The new list of messages.
+        """
+        self._messages = messages
+
     def clean_tool_calls(self) -> None:
         """
         Removes intermediate tool calls and responses from the history.

@@ -5,7 +5,13 @@ from google.genai.client import AsyncClient
 from google.genai.types import GenerateContentResponse
 from generic_llm_lib.llm_core import GenericLLM, get_logger
 from generic_llm_lib.llm_core.tools import ToolExecutionLoop
-from generic_llm_lib.llm_core.messages import BaseMessage, UserMessage, AssistantMessage, SystemMessage
+from generic_llm_lib.llm_core.messages import (
+    BaseMessage,
+    UserMessage,
+    AssistantMessage,
+    SystemMessage,
+    ToolMessage,
+)
 from generic_llm_lib.llm_core.base import ChatResult
 from .adapter import GeminiToolAdapter
 from .registry import GeminiToolRegistry
@@ -56,7 +62,6 @@ class GenericGemini(GenericLLM[GenerateContentResponse]):
         if registry:
             self.registry = registry
         elif self.tool_manager:
-
             self.registry = self.tool_manager.registry
         else:
             self.registry = GeminiToolRegistry()
@@ -83,25 +88,18 @@ class GenericGemini(GenericLLM[GenerateContentResponse]):
         logger.info(f"Initialized GenericGemini with model='{model_name}', temp={temp}, max_tokens={max_tokens}")
 
     async def _chat_impl(
-        self, history: List[BaseMessage], user_prompt: str, clean_history: bool = False
+        self, history: List[BaseMessage], user_prompt: str
     ) -> ChatResult[GenerateContentResponse]:
         """
         Processes a single turn of a chat conversation, including handling user input,
         generating LLM responses, and executing any requested function calls.
 
-        The method supports a multi-turn interaction where the LLM can call functions
-        and receive their results within the same turn, up to `max_function_loops` times.
-
         Args:
             history: A list of `BaseMessage` objects representing the conversation history.
             user_prompt: The current message from the user.
-            clean_history: Decide if the history may contain complete function_call parts or not.
 
         Returns:
-            GeminiChatResponse: An object containing:
-            - The final text response from the LLM after all function calls (if any) are resolved.
-            - The updated conversation history, including the user's prompt, LLM's responses,
-              and any tool calls/responses.
+            ChatResult[GenerateContentResponse]: An object containing the response and updated history.
         """
         logger.debug(f"Starting chat turn. History length: {len(history)}. Prompt: {user_prompt[:50]}...")
 
@@ -124,17 +122,10 @@ class GenericGemini(GenericLLM[GenerateContentResponse]):
 
         response, chat = await self._handle_function_calls(_response, chat)
 
-        # Get full history
+        # Get full history from the chat session
         full_history = chat.get_history()
 
-        # Clean history to remove intermediate tool calls and outputs to save tokens
-        if clean_history:
-            logger.debug("Cleaning chat history (removing intermediate tool calls).")
-            cleaned_history = self._clean_history(full_history)
-            return self._build_response(response, cleaned_history)
-
-        else:
-            return self._build_response(response, full_history)
+        return self._build_response(response, full_history)
 
     @staticmethod
     def _convert_history(history: List[BaseMessage]) -> List[types.Content]:
@@ -152,16 +143,30 @@ class GenericGemini(GenericLLM[GenerateContentResponse]):
             if isinstance(msg, UserMessage):
                 gemini_history.append(types.Content(role="user", parts=[types.Part(text=msg.content)]))
             elif isinstance(msg, AssistantMessage):
-                gemini_history.append(types.Content(role="model", parts=[types.Part(text=msg.content)]))
+                parts = []
+                if msg.content:
+                    parts.append(types.Part(text=msg.content))
+                if msg.tool_calls:
+                    for tc in msg.tool_calls:
+                        if isinstance(tc, types.FunctionCall):
+                            parts.append(types.Part(function_call=tc))
+                        elif isinstance(tc, dict):
+                            parts.append(types.Part(function_call=types.FunctionCall(**tc)))
+                gemini_history.append(types.Content(role="model", parts=parts))
+            elif isinstance(msg, ToolMessage):
+                # Gemini expects function responses in a Content object, usually with role 'user' or 'function'
+                # In the current SDK version, 'user' is often used for tool responses.
+                part = types.Part(
+                    function_response=types.FunctionResponse(
+                        name=msg.name,
+                        response={"result": msg.content},
+                    )
+                )
+                gemini_history.append(types.Content(role="user", parts=[part]))
             elif isinstance(msg, SystemMessage):
-                # System messages are typically handled via system_instruction in config,
-                # but if they appear in history, we might treat them as user or model depending on context,
-                # or skip if already set in config. For now, let's treat as user message or skip.
-                # Gemini doesn't have a 'system' role in chat history in the same way as OpenAI.
-                # It's usually set at initialization.
+                # System instructions are typically handled via config, but we can include them if needed.
+                # Gemini doesn't have a 'system' role in chat history; it's set at session creation.
                 pass
-            # Tool messages handling would be more complex as it requires mapping back to function calls/responses
-            # For now, we focus on text history.
         return gemini_history
 
     async def _handle_function_calls(
@@ -169,18 +174,14 @@ class GenericGemini(GenericLLM[GenerateContentResponse]):
     ) -> Tuple[GenerateContentResponse, Any]:
         """
         Handles the function calling loop.
-        Iterates through the response to check for function calls, executes them,
-        and sends the results back to the model until no more function calls are made
-        or the limit is reached.
 
         Args:
             response: The initial response from the model.
             chat: The current chat session object.
 
         Returns:
-            Tuple[GenerateContentResponse, Any]: The final response from the model and the updated chat object.
+            Tuple[GenerateContentResponse, Any]: The final response and updated chat object.
         """
-
         if not response:
             return response, chat
 
@@ -193,62 +194,20 @@ class GenericGemini(GenericLLM[GenerateContentResponse]):
         return result, chat
 
     @staticmethod
-    def _clean_history(history: Sequence[types.Content]) -> List[types.Content]:
-        """Removes intermediate tool calls and outputs from the history to save tokens.
-
-        Keeps user messages, system instructions, and assistant messages that have content.
-
-        Args:
-            history: The conversation history to clean.
-
-        Returns:
-            A list of cleaned content objects.
-        """
-        cleaned_history = []
-        for content in history:
-            # Skip if no parts
-            if not content.parts:
-                cleaned_history.append(content)
-                continue
-
-            # Check if it is a function response
-            has_function_response = any(part.function_response for part in content.parts)
-            if has_function_response:
-                continue
-
-            # Check for function calls
-            has_function_call = any(part.function_call for part in content.parts)
-
-            if has_function_call:
-                # Filter out function_call parts, keep text parts
-                new_parts = [part for part in content.parts if not part.function_call]
-
-                if new_parts:
-                    # Create new Content with remaining parts (e.g. text)
-                    cleaned_history.append(types.Content(role=content.role, parts=new_parts))
-                # If no parts left (only function calls), we skip this message
-            else:
-                # No function calls or responses, keep as is
-                cleaned_history.append(content)
-
-        return cleaned_history
-
-    @staticmethod
     def _build_response(
         response: GenerateContentResponse, history: Sequence[types.Content]
     ) -> ChatResult[GenerateContentResponse]:
         """
-        Constructs the final GeminiChatResponse object from the raw API response and chat history.
+        Constructs the final ChatResult object.
 
         Args:
             response: The final GenerateContentResponse from the model.
             history: The chat history list.
 
         Returns:
-            GeminiChatResponse: The structured response containing text, tokens, and history.
+            ChatResult[GenerateContentResponse]: The structured response.
         """
         text_response = "".join([p.text for p in response.parts if p.text]) if response.parts else ""
-        # Convert Gemini history back to generic BaseMessage history
         generic_history = GenericGemini._convert_to_generic_history(history)
 
         return ChatResult(
@@ -271,19 +230,39 @@ class GenericGemini(GenericLLM[GenerateContentResponse]):
         generic_history: List[BaseMessage] = []
         for content in history:
             role = content.role
-            # Check if parts is None before iterating
             if content.parts is None:
                 continue
 
             text_parts = [part.text for part in content.parts if part.text]
             text_content = "".join(text_parts)
-
-            if not text_content:
-                continue
+            
+            tool_calls = [part.function_call for part in content.parts if part.function_call]
+            tool_responses = [part.function_response for part in content.parts if part.function_response]
 
             if role == "user":
-                generic_history.append(UserMessage(content=text_content))
+                if tool_responses:
+                    for tr in tool_responses:
+                        # Check if the response is a dict and extract 'result' if present
+                        # This matches how we construct the response in _convert_history
+                        response_content = tr.response
+                        if isinstance(response_content, dict) and "result" in response_content:
+                            response_content = response_content["result"]
+                        
+                        generic_history.append(
+                            ToolMessage(
+                                content=str(response_content),
+                                tool_call_id="",  # Gemini doesn't use call IDs like OpenAI
+                                name=tr.name,
+                            )
+                        )
+                elif text_content:
+                    generic_history.append(UserMessage(content=text_content))
             elif role == "model":
-                generic_history.append(AssistantMessage(content=text_content))
-            # Handle other roles if necessary
+                if tool_calls or text_content:
+                    generic_history.append(
+                        AssistantMessage(
+                            content=text_content,
+                            tool_calls=tool_calls if tool_calls else None,
+                        )
+                    )
         return generic_history

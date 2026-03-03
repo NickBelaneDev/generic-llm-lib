@@ -1,5 +1,7 @@
 """Schema validation helpers for LLM tool parameter schemas."""
 
+# NOTE: The SchemaValidator is obsolete. Simple functions are way cleaner.
+
 from typing import Any, Dict, List, Optional, Set
 
 from ...exceptions import ToolValidationError

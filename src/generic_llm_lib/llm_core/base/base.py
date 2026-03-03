@@ -82,7 +82,7 @@ class GenericLLM(ABC, Generic[ProviderResT]):
         Conducts a chat turn with the LLM.
 
         Args:
-            history: The conversation history (provider-agnostic format).
+            history: The conversation history as a list of messages or a HistoryHandler.
             user_prompt: The user's input message.
 
         Returns:
@@ -95,7 +95,13 @@ class GenericLLM(ABC, Generic[ProviderResT]):
         else:
             history_list = history
 
-        return await self._execute_with_retry(self._chat_impl, history_list, user_prompt)
+        result = await self._execute_with_retry(self._chat_impl, history_list, user_prompt)
+
+        # Update HistoryHandler if provided
+        if isinstance(history, HistoryHandler):
+            history.update(result.history)
+
+        return result
 
     async def ask(self, prompt: str) -> ChatResult[ProviderResT]:
         """
