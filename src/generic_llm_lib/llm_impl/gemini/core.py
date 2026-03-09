@@ -1,3 +1,12 @@
+"""
+Gemini LLM implementation core module.
+
+This module provides the `GenericGemini` class, which implements the
+`GenericLLM` interface for Google's Gemini models. It handles the
+interaction with the Google GenAI API, including chat history management
+and automatic tool execution loops.
+"""
+
 from google.genai import types
 from typing import List, Tuple, Optional, Any, Sequence
 

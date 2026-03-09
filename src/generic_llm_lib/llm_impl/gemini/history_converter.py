@@ -8,14 +8,13 @@ the conversion process into small, single-responsibility functions to ensure
 low cyclomatic complexity (Rank A) and high maintainability.
 """
 
-from typing import List, Sequence, Optional, Union, Any
+from typing import List, Sequence, Optional, Union
 from google.genai import types
 
 from generic_llm_lib.llm_core.messages import (
     BaseMessage,
     UserMessage,
     AssistantMessage,
-    SystemMessage,
     ToolMessage,
 )
 
@@ -93,7 +92,7 @@ def _create_tool_message_from_response(tr: types.FunctionResponse) -> ToolMessag
     return ToolMessage(
         content=str(response_content),
         tool_call_id="",  # Gemini does not use tool_call_id
-        name=tr.name,
+        name=tr.name,  # type: ignore[arg-type]
     )
 
 

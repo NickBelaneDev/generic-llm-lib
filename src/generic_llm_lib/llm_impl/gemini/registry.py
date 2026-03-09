@@ -1,3 +1,12 @@
+"""
+Gemini-specific tool registry implementation.
+
+This module provides the `GeminiToolRegistry` class, which manages the
+registration and formatting of tools specifically for Google's Gemini
+models. It handles the conversion of generic tool definitions into the
+format required by the Google GenAI SDK, including schema sanitization.
+"""
+
 from google.genai import types
 from generic_llm_lib.llm_core import ToolRegistry, ToolDefinition
 from . import schema_sanitizer

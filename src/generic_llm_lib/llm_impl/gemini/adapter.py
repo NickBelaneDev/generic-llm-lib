@@ -1,3 +1,11 @@
+"""
+Gemini-specific tool adapter implementation.
+
+This module provides the `GeminiToolAdapter` class, which bridges the gap
+between the generic tool execution loop and the Google Gemini API's
+specific requirements for handling function calls and responses.
+"""
+
 from google.genai import types
 from typing import Any, Sequence, cast
 from google.genai.types import GenerateContentResponse
@@ -8,13 +16,18 @@ logger = get_logger(__name__)
 
 
 class GeminiToolAdapter(ToolAdapter):
-    """Adapter for Gemini tool handling."""
+    """Adapter for Gemini tool handling.
+
+    This class implements the `ToolAdapter` interface to provide Gemini-specific
+    logic for extracting tool calls from responses and building tool response
+    messages in the format expected by the Google GenAI SDK.
+    """
 
     def __init__(self, chat_session: Any):
         """Initialize the Gemini tool adapter.
 
         Args:
-            chat_session: The Gemini chat session instance.
+            chat_session: The Gemini chat session instance used to send messages.
         """
         self.chat_session = chat_session
 

@@ -1,4 +1,11 @@
-"""Tool registry abstraction and helper utilities."""
+"""
+Tool registry abstraction and helper utilities.
+
+This module defines the base `ToolRegistry` class, which serves as a central
+repository for managing tools that can be invoked by an LLM. It handles
+registration, unregistration, and automatic generation of tool definitions
+from Python callables using reflection and Pydantic.
+"""
 
 from abc import abstractmethod, ABC
 from typing import Callable, Dict, Any, Union, Optional, cast
@@ -29,6 +36,34 @@ class ToolRegistry(ABC):
         """Initialize the ToolRegistry."""
         self.tools: Dict[str, ToolDefinition] = {}
 
+    def _register_tool_definition(self, tool: ToolDefinition) -> None:
+        """Registers a ToolDefinition object directly."""
+        if tool.name in self.tools:
+            msg = f"Tool '{tool.name}' is already registered."
+            logger.error(msg)
+            raise ToolRegistrationError(msg)
+
+        self.tools[tool.name] = tool
+        logger.info(f"Successfully registered tool: '{tool.name}'")
+
+    def _register_callable(self, func: Callable, name: Optional[str] = None, description: Optional[str] = None) -> None:
+        """Registers a callable function by generating a ToolDefinition."""
+        tool = self._generate_tool_definition(func, name=name, description=description)
+        self._register_tool_definition(tool)
+
+    def _register_manual(
+        self, name: str, func: Callable, parameters: Optional[Any] = None, description: Optional[str] = None
+    ) -> None:
+        """Registers a tool with manually provided components."""
+        if parameters is None:
+            # If no parameters provided, try to generate definition from function
+            self._register_callable(func, name=name, description=description)
+        else:
+            if description is None:
+                raise ToolRegistrationError("If passing name and parameters, description is required.")
+            tool = ToolDefinition(name=name, description=description, func=func, parameters=parameters)
+            self._register_tool_definition(tool)
+
     def register(
         self,
         name_or_tool: Union[str, ToolDefinition, Callable],
@@ -52,30 +87,16 @@ class ToolRegistry(ABC):
         Raises:
             ToolRegistrationError: If individual arguments are provided but some are missing or if the tool already exists.
         """
-
         if isinstance(name_or_tool, ToolDefinition):
-            tool = name_or_tool
+            self._register_tool_definition(name_or_tool)
         elif callable(name_or_tool):
-            tool = self._generate_tool_definition(name_or_tool, description=description)
-        else:
-            # name_or_tool is a string (name)
+            self._register_callable(name_or_tool, description=description)
+        elif isinstance(name_or_tool, str):
             if func is None:
                 raise ToolRegistrationError("If passing name as string, func is required.")
-
-            if parameters is None:
-                tool = self._generate_tool_definition(func, name=name_or_tool, description=description)
-            else:
-                if description is None:
-                    raise ToolRegistrationError("If passing name and parameters, description is required.")
-                tool = ToolDefinition(name=name_or_tool, description=description, func=func, parameters=parameters)
-
-        if tool.name in self.tools:
-            msg = f"Tool '{tool.name}' is already registered."
-            logger.error(msg)
-            raise ToolRegistrationError(msg)
-
-        self.tools[tool.name] = tool
-        logger.info(f"Successfully registered tool: '{tool.name}'")
+            self._register_manual(name_or_tool, func, parameters, description)
+        else:
+            raise ToolRegistrationError(f"Invalid type for name_or_tool: {type(name_or_tool)}")
 
     def unregister(self, tool_name: str) -> None:
         """Unregister a tool from the registry.

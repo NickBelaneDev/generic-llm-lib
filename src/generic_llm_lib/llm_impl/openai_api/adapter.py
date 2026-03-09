@@ -1,3 +1,11 @@
+"""
+OpenAI-specific tool adapter implementation.
+
+This module provides the `OpenAIToolAdapter` class, which bridges the gap
+between the generic tool execution loop and the OpenAI API's specific
+requirements for handling function calls and responses.
+"""
+
 from __future__ import annotations
 
 from openai import AsyncOpenAI
@@ -13,7 +21,12 @@ if TYPE_CHECKING:
 
 
 class OpenAIToolAdapter(ToolAdapter):
-    """Adapter for OpenAI tool handling."""
+    """Adapter for OpenAI tool handling.
+
+    This class implements the `ToolAdapter` interface to provide OpenAI-specific
+    logic for extracting tool calls from responses and building tool response
+    messages in the format expected by the OpenAI API.
+    """
 
     def __init__(
         self,

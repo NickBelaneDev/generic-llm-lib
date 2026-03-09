@@ -1,3 +1,12 @@
+"""
+OpenAI-specific tool registry implementation.
+
+This module provides the `OpenAIToolRegistry` class, which manages the
+registration and formatting of tools specifically for OpenAI's chat
+completion models. It handles the conversion of generic tool definitions
+into the JSON schema format required by the OpenAI API.
+"""
+
 from openai.types.chat import ChatCompletionFunctionToolParam
 
 from generic_llm_lib.llm_core import ToolRegistry, ToolDefinition

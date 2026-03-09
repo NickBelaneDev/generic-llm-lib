@@ -1,19 +1,23 @@
+"""
+OpenAI LLM implementation core module.
+
+This module provides the `GenericOpenAI` class, which implements the
+`GenericLLM` interface for OpenAI's chat completion models. It handles
+the interaction with the OpenAI API, including chat history management
+and automatic tool execution loops.
+"""
+
 from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletion, ChatCompletionToolParam
 from typing import List, Tuple, Optional, Any, Dict, Iterable, cast
 import logging
 from generic_llm_lib.llm_core import GenericLLM
 from generic_llm_lib.llm_core.tools import ToolExecutionLoop, ToolManager
-from generic_llm_lib.llm_core.messages import (
-    BaseMessage,
-    UserMessage,
-    AssistantMessage,
-    SystemMessage,
-    ToolMessage,
-)
+from generic_llm_lib.llm_core.messages import BaseMessage
 from generic_llm_lib.llm_core.base import ChatResult
 from .adapter import OpenAIToolAdapter
 from .registry import OpenAIToolRegistry
+from .history_converter import convert_to_openai_history, convert_from_openai_history
 
 logger = logging.getLogger(__name__)
 
@@ -76,6 +80,44 @@ class GenericOpenAI(GenericLLM[ChatCompletion]):
             argument_error_formatter=self._format_argument_error,
         )
 
+    def _prepare_messages(self, history: List[BaseMessage], user_prompt: str) -> List[Dict[str, Any]]:
+        """Prepares the initial list of messages for the OpenAI API call."""
+        openai_history = convert_to_openai_history(history)
+        messages = list(openai_history)
+
+        if not messages and self.sys_instruction:
+            messages.append({"role": "system", "content": self.sys_instruction})
+
+        messages.append({"role": "user", "content": user_prompt})
+        return messages
+
+    def _get_tools_config(self) -> Optional[Iterable[ChatCompletionToolParam]]:
+        """Retrieves the tool configuration from the registry."""
+        if not self.registry:
+            return None
+
+        tools = self.registry.tool_object
+        if tools:
+            logger.debug(f"Tools registered: {[t.get('function', {}).get('name') for t in tools]}")
+        return tools
+
+    @staticmethod
+    def _log_initial_response_status(response: ChatCompletion) -> None:
+        """Logs the status of the initial OpenAI response."""
+        if not response.choices:
+            logger.debug(f"Initial response has no choices. Response dump: {response.model_dump()}")
+        else:
+            logger.debug(f"Initial response received. Finish reason: {response.choices[0].finish_reason}")
+
+    @staticmethod
+    def _append_final_response_to_messages(messages: List[Dict[str, Any]], final_response: ChatCompletion) -> None:
+        """Appends the final LLM response to the messages list if it contains content."""
+        if final_response.choices and final_response.choices[0].message.content:
+            last_msg = final_response.choices[0].message.model_dump()
+            # Avoid duplicates if the message is already present (e.g., from tool loop)
+            if not messages or messages[-1] != last_msg:
+                messages.append(last_msg)
+
     async def _chat_impl(self, history: List[BaseMessage], user_prompt: str) -> ChatResult[ChatCompletion]:
         """
         Processes a single turn of a chat conversation, including handling user input,
@@ -97,23 +139,8 @@ class GenericOpenAI(GenericLLM[ChatCompletion]):
         """
         logger.debug(f"chat() called. History length: {len(history)}, User prompt: {user_prompt}")
 
-        # Convert generic history to OpenAI specific history
-        openai_history = self._convert_history(history)
-
-        # Prepare the messages list. If history is empty, add system instruction first.
-        messages = list(openai_history)
-        if not messages and self.sys_instruction:
-            messages.append({"role": "system", "content": self.sys_instruction})
-
-        # Add user message
-        messages.append({"role": "user", "content": user_prompt})
-
-        # Get tools configuration
-        tools: Iterable[ChatCompletionToolParam] | None = None
-        if self.registry:
-            tools = self.registry.tool_object
-            if tools:
-                logger.debug(f"Tools registered: {[t.get('function', {}).get('name') for t in tools]}")
+        messages = self._prepare_messages(history, user_prompt)
+        tools = self._get_tools_config()
 
         # Initial call to OpenAI
         logger.debug(f"Sending initial request to OpenAI model: {self.model}")
@@ -125,54 +152,13 @@ class GenericOpenAI(GenericLLM[ChatCompletion]):
             max_tokens=self.max_tokens,
         )
 
-        if not response.choices:
-            logger.debug(f"Initial response has no choices. Response dump: {response.model_dump()}")
-            pass
-        else:
-            logger.debug(f"Initial response received. Finish reason: {response.choices[0].finish_reason}")
-            pass
+        self._log_initial_response_status(response)
 
         messages, final_response = await self._handle_function_calls(messages, response, tools)
 
-        # Ensure the final response is added to the history if it has content
-        if final_response.choices and final_response.choices[0].message.content:
-            # Check if the last message in history is already this response (to avoid duplicates if logic changes)
-            # The tool loop does NOT record the final response, so we must add it here.
-            last_msg = final_response.choices[0].message.model_dump()
-            # Only add if not already present (simple check)
-            if not messages or messages[-1] != last_msg:
-                messages.append(last_msg)
+        self._append_final_response_to_messages(messages, final_response)
 
         return self._build_response(final_response, messages)
-
-    @staticmethod
-    def _convert_history(history: List[BaseMessage]) -> List[Dict[str, Any]]:
-        """
-        Converts generic BaseMessage history to OpenAI specific dictionary history.
-
-        Args:
-            history: List of BaseMessage objects.
-
-        Returns:
-            List of OpenAI message dictionaries.
-        """
-        openai_history = []
-        for msg in history:
-            if msg.role == "user":
-                openai_history.append({"role": "user", "content": msg.content})
-            elif msg.role == "assistant":
-                openai_msg = {"role": "assistant", "content": msg.content}
-                if isinstance(msg, AssistantMessage) and msg.tool_calls:
-                    openai_msg["tool_calls"] = msg.tool_calls  # type: ignore
-                openai_history.append(openai_msg)
-            elif msg.role == "system":
-                openai_history.append({"role": "system", "content": msg.content})
-            elif msg.role == "tool":
-                if isinstance(msg, ToolMessage):
-                    openai_history.append(
-                        {"role": "tool", "content": msg.content, "tool_call_id": msg.tool_call_id, "name": msg.name}
-                    )
-        return openai_history
 
     async def _handle_function_calls(
         self,
@@ -226,60 +212,9 @@ class GenericOpenAI(GenericLLM[ChatCompletion]):
             message_content = ""
 
         # Convert OpenAI history back to generic BaseMessage history
-        generic_history = GenericOpenAI._convert_to_generic_history(history)
+        generic_history = convert_from_openai_history(history)
 
         return ChatResult(content=message_content, history=generic_history, raw=response)
-
-    @staticmethod
-    def _convert_to_generic_history(history: List[Dict[str, Any]]) -> List[BaseMessage]:
-        """
-        Converts OpenAI specific dictionary history to generic BaseMessage history.
-
-        Args:
-            history: List of OpenAI message dictionaries.
-
-        Returns:
-            List of BaseMessage objects.
-        """
-        generic_history: List[BaseMessage] = []
-        for msg in history:
-            role = msg.get("role")
-            content = msg.get("content")
-            tool_calls = msg.get("tool_calls")
-
-            # Handle None content
-            if content is None:
-                if role == "assistant" and tool_calls:
-                    content = ""
-                else:
-                    # Skip messages with None content (except assistant with tools)
-                    continue
-
-            # Handle empty content
-            if content == "":
-                # Keep if it's an assistant with tool calls
-                if role == "assistant" and tool_calls:
-                    pass
-                # Keep if it's a tool response (must not be skipped to maintain conversation flow)
-                elif role == "tool":
-                    pass
-                else:
-                    # Skip empty user or system messages
-                    continue
-
-            if role == "user":
-                generic_history.append(UserMessage(content=content))
-            elif role == "assistant":
-                generic_history.append(AssistantMessage(content=content, tool_calls=tool_calls))
-            elif role == "system":
-                generic_history.append(SystemMessage(content=content))
-            elif role == "tool":
-                tool_call_id = msg.get("tool_call_id")
-                name = msg.get("name", "unknown_tool")
-                if tool_call_id:
-                    generic_history.append(ToolMessage(content=content, tool_call_id=tool_call_id, name=name))
-            # Handle other roles if necessary
-        return generic_history
 
     @staticmethod
     def _format_argument_error(tool_name: str, error: Exception) -> str:
