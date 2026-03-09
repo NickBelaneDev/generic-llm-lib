@@ -168,7 +168,4 @@ class SchemaValidator:
     @staticmethod
     def _sanitize_list(data: List[Any]) -> List[Any]:
         """Sanitizes a list of items."""
-        return [
-            SchemaValidator.sanitize_schema(item) if isinstance(item, dict) else item
-            for item in data
-        ]
+        return [SchemaValidator.sanitize_schema(item) if isinstance(item, dict) else item for item in data]

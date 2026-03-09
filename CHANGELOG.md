@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **ToolManager**: Allows LLMs to load tools dynamically. Use with caution!
 - **Retry Logic**: The GenericLLM methods now provide a retry logic.
+- **HistoryHandler**: Handle the complete chat history with the `HistoryHandler` class
+
+### Changed
+- **Refactoring**: Extracted Gemini history conversion logic into a dedicated `history_converter` module to improve maintainability and reduce complexity in `GenericGemini`.
 
 ## [0.4.0] - 2026-02-01
 

@@ -1,6 +1,6 @@
 """Provider-agnostic message models for chat history."""
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from abc import ABC
 from typing import Optional, List, Any
 

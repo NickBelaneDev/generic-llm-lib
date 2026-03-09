@@ -59,9 +59,9 @@ class HistoryHandler:
     def update(self, messages: List[BaseMessage]) -> None:
         """
         Update the history with a new list of messages.
-        
+
         This replaces the current history with the provided list.
-        
+
         Args:
             messages: The new list of messages.
         """

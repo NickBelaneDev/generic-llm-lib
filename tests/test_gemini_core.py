@@ -115,9 +115,7 @@ async def test_gemini_function_calling_with_empty_args(genai_client: AsyncClient
 async def test_gemini_history_handler_integration(genai_client: AsyncClient) -> None:
     """Test that HistoryHandler correctly maintains context across multiple turns."""
     gemini = GenericGemini(
-        aclient=genai_client,
-        model_name="gemini-2.5-flash",
-        sys_instruction="You are a helpful assistant."
+        aclient=genai_client, model_name="gemini-2.5-flash", sys_instruction="You are a helpful assistant."
     )
 
     # Initialize history
@@ -125,10 +123,10 @@ async def test_gemini_history_handler_integration(genai_client: AsyncClient) -> 
 
     # First turn: User introduces themselves
     response1 = await gemini.chat(history, "My name is Alice.")
-    
+
     # Update history with the response
     # Note: response.history contains the FULL history of that session (User + Assistant)
-    # We need to be careful not to duplicate if we were appending manually, 
+    # We need to be careful not to duplicate if we were appending manually,
     # but here we can just re-initialize or append the new messages.
     # The GenericLLM.chat method returns the full history of the interaction.
     history = HistoryHandler(messages=response1.history)
@@ -138,7 +136,7 @@ async def test_gemini_history_handler_integration(genai_client: AsyncClient) -> 
 
     # Verify the assistant remembers the name
     assert "Alice" in response2.content
-    
+
     # Verify the history length grew
     # 1. User: My name is Alice
     # 2. Assistant: Hello Alice...

@@ -76,9 +76,7 @@ class GenericOpenAI(GenericLLM[ChatCompletion]):
             argument_error_formatter=self._format_argument_error,
         )
 
-    async def _chat_impl(
-        self, history: List[BaseMessage], user_prompt: str
-    ) -> ChatResult[ChatCompletion]:
+    async def _chat_impl(self, history: List[BaseMessage], user_prompt: str) -> ChatResult[ChatCompletion]:
         """
         Processes a single turn of a chat conversation, including handling user input,
         generating LLM responses, and executing any requested function calls.
