@@ -8,17 +8,14 @@ from Python callables using reflection and Pydantic.
 """
 
 from abc import abstractmethod, ABC
-from typing import Callable, Dict, Any, Union, Optional, cast
+from typing import Callable, Dict, Any, Union, Optional
 
-import jsonref  # type: ignore
-from pydantic import create_model
 
 from ..models import ToolDefinition
 from .tool_definition_factory import ToolFactory
-from ...exceptions import ToolNotFoundError, ToolRegistrationError, ToolValidationError
+from ...exceptions import ToolNotFoundError, ToolRegistrationError
 
 from ...logger import get_logger
-import inspect
 
 logger = get_logger(__name__)
 
@@ -49,7 +46,7 @@ class ToolRegistry(ABC):
 
     def _register_callable(self, func: Callable, name: Optional[str] = None, description: Optional[str] = None) -> None:
         """Registers a callable function by generating a ToolDefinition."""
-        #tool = self._generate_tool_definition(func, name=name, description=description)
+        # tool = self._generate_tool_definition(func, name=name, description=description)
         tool = self.tool_factory.generate_tool_definition(func, name=name, description=description)
         self._register_tool_definition(tool)
 

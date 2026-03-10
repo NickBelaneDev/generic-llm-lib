@@ -20,8 +20,10 @@ import inspect
 
 logger = get_logger(__name__)
 
+
 class ToolFactory:
     """Creates tools from Callables, schemas and so on."""
+
     def generate_tool_definition(
         self, func: Callable, name: Optional[str] = None, description: Optional[str] = None
     ) -> ToolDefinition:

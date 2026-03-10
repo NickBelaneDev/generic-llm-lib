@@ -14,9 +14,10 @@ class TestToolFactory:
 
     def test_generate_tool_definition_simple(self):
         """Test generating a tool definition from a simple function using Annotated."""
+
         def simple_func(
             x: Annotated[int, Field(description="The first number.")],
-            y: Annotated[int, Field(description="The second number.")]
+            y: Annotated[int, Field(description="The second number.")],
         ) -> int:
             """Add two numbers."""
             return x + y
@@ -28,7 +29,7 @@ class TestToolFactory:
         assert tool_def.name == "simple_func"
         assert tool_def.description == "Add two numbers."
         assert tool_def.func == simple_func
-        
+
         # Check parameters schema
         params = tool_def.parameters
         assert "properties" in params
@@ -44,9 +45,10 @@ class TestToolFactory:
 
     def test_generate_tool_definition_with_defaults(self):
         """Test generating a tool definition with default values."""
+
         def func_with_defaults(
             name: Annotated[str, Field(description="The person's name.")],
-            greeting: Annotated[str, Field(description="The greeting to use.")] = "Hello"
+            greeting: Annotated[str, Field(description="The greeting to use.")] = "Hello",
         ) -> str:
             """Greet a person."""
             return f"{greeting}, {name}!"
@@ -58,7 +60,7 @@ class TestToolFactory:
         assert "properties" in params
         assert "name" in params["properties"]
         assert "greeting" in params["properties"]
-        
+
         # 'name' is required, 'greeting' is not
         assert "required" in params
         assert "name" in params["required"]
@@ -66,6 +68,7 @@ class TestToolFactory:
 
     def test_generate_tool_definition_missing_docstring(self):
         """Test that ToolValidationError is raised when docstring is missing."""
+
         def no_docstring(x: Annotated[int, Field(description="Input value")]):
             pass
 
@@ -75,6 +78,7 @@ class TestToolFactory:
 
     def test_generate_tool_definition_missing_annotation_description(self):
         """Test that ToolValidationError is raised when parameter description is missing in annotation."""
+
         def missing_annotation(x: int):
             """Docstring exists."""
             pass
@@ -85,21 +89,20 @@ class TestToolFactory:
 
     def test_generate_tool_definition_override_name_description(self):
         """Test overriding name and description."""
+
         def my_func(x: Annotated[int, Field(description="Input value")]):
             """Original docstring."""
             pass
 
         factory = ToolFactory()
-        tool_def = factory.generate_tool_definition(
-            my_func, name="custom_name", description="Custom description"
-        )
+        tool_def = factory.generate_tool_definition(my_func, name="custom_name", description="Custom description")
 
         assert tool_def.name == "custom_name"
         assert tool_def.description == "Custom description"
 
     def test_generate_tool_definition_complex_types(self):
         """Test generating tool definition with complex types (Pydantic models)."""
-        
+
         class User(BaseModel):
             name: str = Field(..., description="User name")
             age: int = Field(..., description="User age")
@@ -107,51 +110,52 @@ class TestToolFactory:
         # Even for Pydantic models, we need to annotate the parameter itself with a description
         def process_user(
             user: Annotated[User, Field(description="The user object.")],
-            active: Annotated[bool, Field(description="Whether the user is active.")] = True
+            active: Annotated[bool, Field(description="Whether the user is active.")] = True,
         ) -> str:
             """Process a user."""
             return "processed"
 
         factory = ToolFactory()
         tool_def = factory.generate_tool_definition(process_user)
-        
+
         params = tool_def.parameters
         assert "properties" in params
         assert "user" in params["properties"]
         assert params["properties"]["user"]["description"] == "The user object."
-        
+
         # Check that the Pydantic model was correctly converted to JSON schema
         user_schema = params["properties"]["user"]
-        
+
         # After resolving refs and sanitizing, the structure should be clean
         assert user_schema["type"] == "object"
         assert "properties" in user_schema
         assert "name" in user_schema["properties"]
         assert "age" in user_schema["properties"]
-        
+
         # Check that definitions are resolved (no $ref)
         assert "$defs" not in params
         assert "definitions" not in params
 
     def test_generate_tool_definition_recursive_schema_error(self):
         """Test that recursive schemas raise an error."""
-        
+
         class Node(BaseModel):
             value: int
-            next: Optional['Node'] = None
+            next: Optional["Node"] = None
 
         def process_node(node: Annotated[Node, Field(description="The node to process.")]):
             """Process a linked list node."""
             pass
 
         factory = ToolFactory()
-        
+
         # Expecting an error due to recursion check
-        with pytest.raises(Exception): 
-             factory.generate_tool_definition(process_node)
+        with pytest.raises(Exception):
+            factory.generate_tool_definition(process_node)
 
     def test_generate_tool_definition_method(self):
         """Test generating a tool definition from a class method (ignoring self)."""
+
         class MyClass:
             def my_method(self, x: Annotated[int, Field(description="Input value.")]) -> int:
                 """Method docstring."""
@@ -160,7 +164,7 @@ class TestToolFactory:
         obj = MyClass()
         factory = ToolFactory()
         tool_def = factory.generate_tool_definition(obj.my_method)
-        
+
         params = tool_def.parameters
         assert "properties" in params
         assert "x" in params["properties"]

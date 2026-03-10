@@ -9,7 +9,7 @@ from typing import Annotated, Any, Dict, TypeVar, Generic, Literal
 from pydantic import Field
 
 from ...exceptions import ToolLoadError
-from ..registry import ToolRegistry
+from ..registry import ToolRegistry, ToolFactory
 from ...logger import get_logger
 
 logger = get_logger(__name__)
@@ -173,10 +173,10 @@ class ToolManager(Generic[R]):
                 if not name.startswith("_") and obj.__doc__:
                     # Get first line of docstring
                     try:
-                        tool_def = self.registry._generate_tool_definition(obj)
+                        tool_def = ToolFactory().generate_tool_definition(obj)
                         schema_str = json.dumps(tool_def.parameters)
                     except Exception:
-                        schema_str = "Konnte Schema nicht extrahieren"
+                        schema_str = "Could not extract schema!"
 
                     tools.append(f"- {name}: {obj.__doc__}\n  Expected kwargs_json Format: {schema_str}")
             if not tools:

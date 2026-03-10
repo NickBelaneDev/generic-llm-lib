@@ -1,5 +1,6 @@
 """Factory and helper functions for creating and manipulating JSON schemas."""
-from typing import Any, Dict, List
+
+from typing import Any
 
 
 def preserve_ref_siblings(schema: Any) -> Any:
@@ -86,7 +87,11 @@ def flatten_single_all_of(schema: Any) -> Any:
         processed_schema = {key: flatten_single_all_of(value) for key, value in schema.items()}
 
         # Check for a single-element "allOf"
-        if "allOf" in processed_schema and isinstance(processed_schema["allOf"], list) and len(processed_schema["allOf"]) == 1:
+        if (
+            "allOf" in processed_schema
+            and isinstance(processed_schema["allOf"], list)
+            and len(processed_schema["allOf"]) == 1
+        ):
             all_of_content = processed_schema.pop("allOf")[0]
             # Merge the content of allOf with the parent, parent's keys take precedence
             merged = {**all_of_content, **processed_schema}
