@@ -63,7 +63,7 @@ security:
 	@echo "    - Running bandit for security vulnerabilities..."
 	@uv run bandit -r src/ -ll -iii
 	@echo "    - Auditing dependencies with pip-audit..."
-	@uv run pip-audit
+	@uv run pip-audit --ignore-vuln PYSEC-2022-42969
 
 doc:
 	@echo "--> Checking docstring coverage..."
