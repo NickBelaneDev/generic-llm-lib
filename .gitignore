@@ -63,3 +63,5 @@ dmypy.json
 /src/generic_llm_lib/repo_to_md.py
 /scripts/repo_to_md.py
 /repo_context.md
+/scripts/check_version.py
+/scripts/

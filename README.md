@@ -21,6 +21,7 @@
 - 🚀 **Async-First Architecture**: Built for high-performance, non-blocking operations.
 - 🤖 **Unified Provider API**: Switch between **OpenAI** and **Google Gemini** with zero logic changes.
 - 🛠️ **Automated Tool Loops**: Handles the complex "Model -> Tool -> Model" execution cycle out-of-the-box.
+- 🔌 **MCP Support**: Seamlessly integrate with [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) servers.
 - 📝 **Smart History Management**: Centralized `HistoryHandler` for effortless conversation state tracking.
 - 📦 **Type-Safe Tooling**: Define tools using standard Python type hints and Pydantic models.
 - 🛡️ **Production Ready**: Built-in exponential backoff, retry logic, and comprehensive error handling.
@@ -95,6 +96,72 @@ async def main():
 if __name__ == "__main__":
     asyncio.run(main())
 ```
+
+## 🔌 Model Context Protocol (MCP) Integration
+
+This library provides a built-in wrapper to easily connect and use tools from any MCP-compliant server.
+
+```python
+import asyncio
+import os
+from openai import AsyncOpenAI
+from generic_llm_lib.llm_impl import GenericOpenAI, OpenAIToolRegistry
+from generic_llm_lib.mcp_wrapper import MCPClientWrapper
+from generic_llm_lib.llm_core.messages import HistoryHandler
+
+async def main():
+    registry = OpenAIToolRegistry()
+    
+    # Connect to an MCP server (e.g., a local SQLite MCP server)
+    # Ensure the MCP server is installed and runnable via command line
+    async with MCPClientWrapper(
+        command="uvx", 
+        args=["mcp-server-sqlite", "--db-path", "./test.db"]
+    ) as mcp_client:
+        
+        # Load all tools from the MCP server into your registry
+        await mcp_client.load_into(registry)
+        
+        # Initialize LLM with the registry containing MCP tools
+        client = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+        llm = GenericOpenAI(
+            client=client,
+            model_name="gpt-4o",
+            sys_instruction="You are a helpful assistant with access to a database.",
+            registry=registry
+        )
+        
+        history = HistoryHandler()
+        
+        # The LLM can now use tools provided by the MCP server
+        result = await llm.chat(history, "Can you check the database for user 'Alice'?")
+        print(result.content)
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+## ⚙️ Configuration
+
+The `GenericOpenAI` class offers several configuration options to fine-tune the LLM's behavior.
+
+| Parameter | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `client` | `AsyncOpenAI` | **Required** | The initialized AsyncOpenAI client. |
+| `model_name` | `str` | **Required** | The model identifier (e.g., `gpt-4o`, `gpt-3.5-turbo`). |
+| `sys_instruction` | `str` | **Required** | System prompt defining the agent's persona. |
+| `registry` | `OpenAIToolRegistry` | `None` | Registry containing tools the LLM can use. |
+| `temp` | `float` | `1.0` | Sampling temperature (0.0 to 2.0). Higher values mean more randomness. |
+| `max_tokens` | `int` | `3000` | Maximum number of tokens to generate. |
+| `max_function_loops` | `int` | `5` | Maximum consecutive tool calls allowed in a single turn. |
+| `tool_timeout` | `float` | `180.0` | Timeout in seconds for tool execution. |
+
+### Environment Variables
+
+Ensure the following environment variables are set depending on your provider:
+
+- **OpenAI**: `OPENAI_API_KEY`
+- **Google Gemini**: `GOOGLE_API_KEY` (if using the Gemini implementation)
 
 ## 🧠 Core Concepts
 
