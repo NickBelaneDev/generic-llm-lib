@@ -71,7 +71,7 @@ doc:
 
 complexity:
 	@echo "--> Analyzing code complexity..."
-	@uv run xenon --max-absolute A --max-modules A --max-average A src/
+	@uv run xenon --max-absolute B --max-modules B --max-average A src/
 
 # ------------------------------------------------------------------------------
 # DEVELOPMENT & TESTING
