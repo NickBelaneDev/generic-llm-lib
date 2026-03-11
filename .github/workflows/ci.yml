@@ -27,3 +27,4 @@ jobs:
       run: make complexity
     - name: Run tests
       run: make test
+
