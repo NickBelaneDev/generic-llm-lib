@@ -9,18 +9,16 @@ The `llm_impl.gemini` package provides the concrete implementation of the Generi
 Contains the main implementation of the LLM wrapper.
 
 #### `GenericGemini`
-A subclass of `GenericLLM` that interfaces with the Google GenAI API.
+A subclass of `GenericLLM` that interfaces with the Google GenAI API using the `AsyncClient`.
 
 *   **Initialization:**
-    *   Requires an initialized `genai.Client`.
-    *   Configurable parameters: `model_name`, `sys_instruction`, `registry`, `temp`, `max_tokens`, `max_function_loops`.
+    *   Requires an initialized `google.genai.AsyncClient`.
+    *   Configurable parameters: `model_name`, `sys_instruction`, `registry`, `temp`, `max_tokens`, `max_function_loops`, `tool_timeout`, `tool_manager`.
     *   Configures the `types.GenerateContentConfig` with tools and generation settings.
 
 *   **Methods:**
-    *   `chat(history, user_prompt)`: Manages the chat session. It creates a `chats` session with the provided history, sends the user message, and handles the response. It also cleans the history of intermediate tool calls to save tokens.
-    *   `ask(prompt, model)`: A simplified interface for single-turn interactions. It wraps `chat` internally.
-    *   `_handle_function_calls`: Manages the loop of executing function calls returned by the model. It supports parallel function calling (multiple calls in one turn), executes them (sync or async), and sends the results back to the model until completion or the loop limit is reached.
-    *   `_clean_history`: Removes intermediate tool call parts and function responses from the history to keep the context window manageable, preserving only the final text responses and conversation flow.
+    *   `chat(history, user_prompt)`: Manages the chat session. It uses the Gemini `chats` API to maintain state and handles automated tool execution loops.
+    *   `ask(prompt)`: A convenience method for single-turn stateless queries.
 
 ### 2. `registry.py`
 
@@ -30,61 +28,49 @@ Handles Gemini-specific tool registration.
 A subclass of `ToolRegistry` tailored for Gemini's function declaration format.
 
 *   **Key Features:**
-    *   **`tool_object` Property:** Converts the internal `ToolDefinition` objects into a `types.Tool` object containing a list of `types.FunctionDeclaration`. This is the format required by the Gemini API.
-    *   **Registration:** Inherits the flexible registration logic from the base class.
+    *   **`tool_object` Property:** Converts the internal `ToolDefinition` objects into a `types.Tool` object containing `types.FunctionDeclaration` entries.
+    *   **Direct Integration**: Generates schemas compatible with Gemini's strict requirements.
 
-### 3. `models.py`
+### 3. `adapter.py`
 
-Defines Pydantic models for structured Gemini responses.
+Provides the `GeminiToolAdapter`, which integrates with Gemini's stateful chat sessions to execute tool calls and feed results back to the model within the library's `ToolExecutionLoop`.
 
-*   `GeminiTokens`: Tracks token usage (prompt, candidate, total, thoughts, tool use).
-*   `GeminiMessageResponse`: Contains the text content and token usage for a single message.
-*   `GeminiChatResponse`: The top-level response object returned by `chat`, containing the final response and the updated conversation history (as a list of `types.Content` objects).
+### 4. `history_converter.py`
+
+Contains utilities to convert between the library's internal `BaseMessage` format and Gemini's native `types.Content` objects.
 
 ## Usage Example
 
 ```python
 import asyncio
+import os
 from google import genai
 from generic_llm_lib.llm_impl.gemini import GenericGemini, GeminiToolRegistry
+from generic_llm_lib.llm_core.messages import HistoryHandler
 
 # 1. Setup Registry and Tools
 registry = GeminiToolRegistry()
 
-
-@registry.tool
+@registry.register
 def get_current_time(timezone: str = "UTC"):
     """Returns the current time in the specified timezone."""
     from datetime import datetime
     return f"The time is {datetime.now()} in {timezone}"
 
-
-# 2. Initialize Client and Wrapper
-client = genai.Client(api_key="your-api-key")
-llm = GenericGemini(
-    aclient=client,
-    model_name="gemini-2.5-flash",
-    sys_instruction="You are a helpful assistant.",
-    registry=registry
-)
-
-
-# 3. Run Chat
 async def main():
-    # Single question
-    response = await llm.ask("What time is it in London?")
-    print(response.text)
+    # 2. Initialize Client and Wrapper
+    client = genai.Client(api_key=os.environ.get("GOOGLE_API_KEY"))
+    llm = GenericGemini(
+        aclient=client,
+        model_name="gemini-2.0-flash",
+        sys_instruction="You are a helpful assistant.",
+        registry=registry
+    )
 
-    # Chat session
-    history = []
-    chat_response = await llm.chat(history, "My name is Alice.")
-    print(chat_response.last_response.text)
-
-    # History is updated automatically in the response object
-    history = chat_response.history
-    chat_response = await llm.chat(history, "What is my name?")
-    print(chat_response.last_response.text)
-
+    # 3. Run Chat
+    history = HistoryHandler()
+    result = await llm.chat(history, "What time is it in London?")
+    print(f"Assistant: {result.content}")
 
 if __name__ == "__main__":
     asyncio.run(main())

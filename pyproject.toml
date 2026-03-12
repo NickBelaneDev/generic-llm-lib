@@ -8,10 +8,21 @@ version = "0.4.0"
 description = "A flexible, async-first agent library for LLM providers (Google Gemini, etc.) designed for scalable chatbots and server-side applications."
 readme = "README.md"
 requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [
+    { name = "Robert Millotat", email = "robert.millotat@gmail.com" }
+]
+maintainers = [
+    { name = "Nick Belane", email = "robert.millotat@gmail.com" }
+]
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
     "google-genai",
@@ -24,6 +35,8 @@ dependencies = [
 
 [project.urls]
 "Homepage" = "https://github.com/NickBelaneDev/generic-llm-lib"
+"Repository" = "https://github.com/NickBelaneDev/generic-llm-lib.git"
+"Bug Tracker" = "https://github.com/NickBelaneDev/generic-llm-lib/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -74,4 +87,3 @@ exclude = ["^tests/"]
 
 [tool.bandit]
 skips = []
-
